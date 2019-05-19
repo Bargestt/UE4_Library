@@ -141,6 +141,7 @@ bool AGraphNode::AStar(AGraphNode* From, AGraphNode* To, TArray<AGraphNode*>& Ou
 		return true;
 	}
 
+	// Unoptimized shit ahead bc I don't want to invent a wheel
 
 	TArray<AGraphNode*> OpenList;
 	TArray<AGraphNode*> ClosedList;

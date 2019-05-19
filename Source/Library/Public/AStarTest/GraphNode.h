@@ -14,6 +14,7 @@
 /**
  * Just fiddling arount to know better A* Algorithm works
  * Won't use because much better implementations are exist
+ * Ex. template version in engine
  */
 class UStaticMeshComponent;
 
