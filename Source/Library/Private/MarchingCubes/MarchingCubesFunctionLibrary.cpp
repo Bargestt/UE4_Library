@@ -359,6 +359,50 @@ void UMarchingCubesFunctionLibrary::GenerateMesh(const TArray<TArray<TArray<FVec
 
 }
 
+void UMarchingCubesFunctionLibrary::GenerateMesh(const TArray<FVector4>& Points, const FIntVector& Dimestions, float SurfaceLevel, TArray<FVector>& OutVertices, TArray<int32>& OutIndices, const FMeshGenerationParams& Params /*= FMeshGenerationParams::DefaultMeshGenerationParams*/)
+{
+	int CellsX = Dimestions.X - 1;
+	int CellsY = (CellsX > 0) ? Dimestions.Y - 1 : 0;
+	int CellsZ = (CellsY > 0) ? Dimestions.Z - 1 : 0;
+
+	if (CellsX == 0 || CellsY == 0 || CellsZ == 0 || Dimestions.X * Dimestions.Y * Dimestions.Z > Points.Num())
+	{
+		return;
+	}
+
+
+	OutVertices.Reset(Params.EstimatedTriangleNum * 3);
+	OutIndices.Reset(Params.EstimatedTriangleNum * 3);
+
+	int SizeX = Dimestions.X;
+	int SizeXY = Dimestions.Y * Dimestions.Z;
+	auto index = [SizeX, SizeXY](int x, int y, int z) { return x + y * SizeX + z * SizeXY; };
+
+	for (int X = 0; X < CellsX; X++)
+	{
+		for (int Y = 0; Y < CellsY; Y++)
+		{
+			for (int Z = 0; Z < CellsZ; Z++)
+			{
+				Poligonise(
+					{
+						Points[index(X,   Y,   Z)],
+						Points[index(X+1, Y,   Z)],
+						Points[index(X+1, Y+1, Z)],
+						Points[index(X,   Y+1, Z)],
+
+						Points[index(X,   Y,   Z + 1)],
+						Points[index(X+1, Y,   Z + 1)],
+						Points[index(X+1, Y+1, Z + 1)],
+						Points[index(X,   Y+1, Z + 1)]
+					},
+					SurfaceLevel, OutVertices, OutIndices
+				);
+			}
+		}
+	}
+}
+
 FIntVector UMarchingCubesFunctionLibrary::GetDimensions(const FPointsArray3D& Points)
 {
 	int x = Points.Points.Num();

@@ -64,14 +64,15 @@ UCLASS()
 class LIBRARY_API UMarchingCubesFunctionLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
-		
+
+public:
 	static const int EdgeTable[256];
 	static const int TriTable[256][16];
 
 	// index of both vertices of edge in cell
 	static const int Edges[12][2];
 
-public:
+
 
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Utility|MarchingCubes")
@@ -100,6 +101,8 @@ public:
 	 * @param	SurfaceLevel	Form surface along this value
 	 */
 	static void GenerateMesh(const TArray<TArray<TArray<FVector4>>>& Points, float SurfaceLevel, TArray<FVector>& OutVertices, TArray<int32>& OutIndices, const FMeshGenerationParams& Params = FMeshGenerationParams::DefaultMeshGenerationParams);
+
+	static void GenerateMesh(const TArray<FVector4>& Points, const FIntVector& Dimestions, float SurfaceLevel, TArray<FVector>& OutVertices, TArray<int32>& OutIndices, const FMeshGenerationParams& Params = FMeshGenerationParams::DefaultMeshGenerationParams);
 
 
 
@@ -137,9 +140,10 @@ protected:
 
 		/* Create the triangle */
 		for (int i = 0; TriTable[cubeindex][i] != -1; i++)
-		{
-			int a = Edges[TriTable[cubeindex][i]][0];
-			int b = Edges[TriTable[cubeindex][i]][1];
+		{ 
+			int EdgeIndex = TriTable[cubeindex][i];
+			int a = Edges[EdgeIndex][0];
+			int b = Edges[EdgeIndex][1];
 			VertexArray.Add(VertexLerp(SurfaceLevel, Cell.Verts[a], Cell.Verts[b]));
 
 			IndexArray.Add(IndexArray.Num());
