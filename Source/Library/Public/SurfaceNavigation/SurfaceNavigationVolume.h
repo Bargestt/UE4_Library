@@ -47,11 +47,19 @@ public:
 	FIntVector Dimensions;
 
 
+	UPROPERTY(VisibleAnywhere, Category = "SurfaceNavigationTest", meta=(MakeEditWidget))
+	FVector TestLoc;
+
+	UPROPERTY(VisibleAnywhere, Category = "SurfaceNavigationTest", meta = (MakeEditWidget))
+	FVector PathStart;
 public:
 
 	ASurfaceNavigationVolume();
 
 	virtual void OnConstruction(const FTransform& Transform) override;
+
+	UFUNCTION(BlueprintCallable, CallInEditor, Category = "SurfaceNavigation")
+		void ShowPath();
 
 	UBoxComponent* GetBoxComponent() const { return Box; }
 

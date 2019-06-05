@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 
+DECLARE_STATS_GROUP(TEXT("SurfaceNavigation"), STATGROUP_SurfaceNavigation, STATCAT_Advanced);
+
 struct FEdgeData;
 class FSurfaceNavLocalData;
 
@@ -37,14 +39,15 @@ public:
 	FSurfaceNavBuilder(FSurfaceNavLocalData& SaveTarget) : SaveTarget(SaveTarget){}
 
 
+
 	bool BuildGraph(const TArray<FVector4>& Points, const FIntVector& Dimensions, float SurfaceValue);
 
-	void Finish();
-
-	//TODO: Cleanup graph, spatial partitioning, data extraction
-
-
 protected:
+
+	void CleanUp();
+
+
+
 	bool BuildGraph_Internal(const TArray<FVector4>& Points, const FIntVector& Dimensions, float SurfaceValue, TArray<FEdgeData>& OutEdges);
 
 

@@ -3,6 +3,17 @@
 #include "SurfaceNavLocalData.h"
 #include "GraphAStar.h"
 
+#include "EdgeFinder.h"
+#include "EdgeFinderMap.h"
+
+#include "DrawDebugHelpers.h"
+
+
+
+
+
+
+
 
 namespace FSurfaceNavigation
 {
@@ -61,50 +72,73 @@ FSurfacePathfindResult FSurfaceNavLocalData::FindPath(int32 FromNode, int32 ToNo
 	return Result;
 }
 
-int32 FSurfaceNavLocalData::FindClosestEdge(const FVector& WorldLocation)
+TArray<FVector> FSurfaceNavLocalData::FindPath(const FVector& FromLocation, const FVector& ToLocation) const
 {
-// 	FVector LocalPosition;
-// 	FIntVector Coordinates = ToCellCoordinates(LocalPosition, false);
-// 
-// 	if (!IsCoordinatesValid(Coordinates))
-// 	{
-// 		return -1;
-// 	}
-// 
-// 	int StorageOffset = Dimensions.X*Dimensions.Y*Dimensions.Z;
-// 
-// 	TArray<int32> ClosestEdges;
-// 	for (int Index = 0; Index < 12; Index++)
-// 	{
-// 		int32 EdgeIndex = GetEdgeIndexGlobal(Coordinates, Index, StorageOffset);
-// 		const FEdgeData& Edge = NavData.Edges[EdgeIndex];
-// 
-// 		if (Edge.ConnectedEdges.Num() > 0)
-// 		{
-// 			ClosestEdges.Add(EdgeIndex);
-// 		}
-// 	}
-// 
-// 	if (ClosestEdges.Num() <= 0) return -1; // No edge found
-// 
-// 
-// 
-// 	int32 ClosestEdgeIndex = ClosestEdges[0];
-// 	float ClosestDist = FLT_MAX;
-// 	for (int32 EdgeIndex : ClosestEdges)
-// 	{
-// 		const FEdgeData& Edge = NavData.Edges[EdgeIndex];
-// 
-// 		float Dist = (Edge.EdgeVertex - LocalPosition).SizeSquared();
-// 		if (ClosestDist > Dist)
-// 		{
-// 			ClosestDist = Dist;
-// 			ClosestEdgeIndex = EdgeIndex;
-// 		}
-// 	}
-// 
-// 	//OutEdge = NavData.Edges[ClosestEdgeIndex];
-// 	return ClosestEdgeIndex;
+	int32 StartNode = FindClosestEdgeIndex(FromLocation);
+	int32 EndNode = FindClosestEdgeIndex(ToLocation);
 
-	return -1;
+	FSurfacePathfindResult Result = FindPath(StartNode, EndNode);
+	TArray<FVector> Path = {FromLocation};
+	for (int32 index : Result.Path)
+	{
+		Path.Add(Graph[index].EdgeVertex);
+	}
+	
+	return Path;
 }
+
+DECLARE_CYCLE_STAT(TEXT("SurfaceNavigation ~ GetCellIndex"), STAT_GetCellIndex, STATGROUP_SurfaceNavigation);
+
+int32 FSurfaceNavLocalData::FindClosestEdgeIndex(const FVector& Location) const
+{
+	SCOPE_CYCLE_COUNTER(STAT_GetCellIndex);
+
+	int32 ClosestIndex = -1;	
+
+	if (EdgeFinder.IsValid() && EdgeFinder->IsReady())
+	{
+		ClosestIndex = EdgeFinder->FindEdgeIndex(Location);
+	}
+	else
+	{	// Failsafe method, mostly for comparing performance		
+		float CurDist, ClosestDist = FLT_MAX;
+		for (int Index = 0; Index < Graph.Num() ; Index++)
+		{
+			CurDist = (Graph[Index].EdgeVertex - Location).SizeSquared();
+			if (CurDist < ClosestDist)
+			{
+				ClosestDist = CurDist;
+				ClosestIndex = Index;
+			}			
+		}	
+	}
+	GEngine->AddOnScreenDebugMessage(1, 2, FColor::Cyan, (EdgeFinder.IsValid() && EdgeFinder->IsReady())? TEXT("Finder") : TEXT("Dumb"));	
+	return ClosestIndex;
+}
+
+
+FVector FSurfaceNavLocalData::ToLocation(int32 EdgeIndex) const
+{
+	return Graph.IsValidIndex(EdgeIndex) ? Graph[EdgeIndex].EdgeVertex : FSurfaceNavigation::InvalidLocation;
+}
+
+bool FSurfaceNavLocalData::IsInside(const FVector& Location) const
+{
+	FVector Extent = FVector(BuildGridDimensions) * BuildGridCellSize;
+	return Extent.X > Location.X && Extent.Y > Location.Y && Extent.Z > Location.Z;
+}
+
+void FSurfaceNavLocalData::InitFinder()
+{
+	EdgeFinder = TUniquePtr<FEdgeFinderMap>(new FEdgeFinderMap(*this));
+}
+
+void FSurfaceNavLocalData::GraphChanged()
+{
+	InitFinder();
+	if (EdgeFinder != nullptr)
+	{
+		EdgeFinder->Rebuild();
+	}
+}
+

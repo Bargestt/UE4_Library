@@ -48,8 +48,26 @@ void ASurfaceNavigationVolume::OnConstruction(const FTransform& Transform)
 	Super::OnConstruction(Transform);
 
 	CreateNavData();
+
+	FVector Location = NavData.ToLocation(NavData.FindClosestEdgeIndex(TestLoc));
+	if (FSurfaceNavigation::IsValidLocation(Location))
+	{
+		DrawDebugSphere(GetWorld(), GetActorTransform().TransformPosition(Location), 10, 12, FColor::Green, false, 15);
+	}
 }
 
+
+void ASurfaceNavigationVolume::ShowPath()
+{
+	TArray<FVector> path = NavData.FindPath(PathStart, TestLoc);
+
+	for (int Index = 0; Index < path.Num() - 1 ; Index++)
+	{
+		FVector p1 = GetActorTransform().TransformPosition(path[Index]);
+		FVector p2 = GetActorTransform().TransformPosition(path[Index+1]);
+		DrawDebugLine(GetWorld(), p1, p2, FColor::Green, false, 5, 0, 3);
+	}
+}
 
 void ASurfaceNavigationVolume::CreateNavData()
 {
@@ -60,13 +78,11 @@ void ASurfaceNavigationVolume::CreateNavData()
 	SamplePoints(Dimensions, StepSize, Points);
 
 	FSurfaceNavBuilder Builder(NavData);
-	Builder.BuildGraph(Points, Dimensions, SurfaceValue);
-
+	Builder.BuildGraph(Points, Dimensions, SurfaceValue);	
 	
 	SetupMeshFromPoints(Points, Dimensions);
 	if (bShowGraph) 
 	{
-
 		FlushPersistentDebugLines(GetWorld());
 		USurfaceNavFunctionLibrary::DrawSurfaceGraph(this, GetActorTransform(), NavData);
 	}
@@ -126,6 +142,7 @@ void ASurfaceNavigationVolume::SamplePoints(const FIntVector& Dimensions, float 
 		}
 	}
 }
+
 
 
 

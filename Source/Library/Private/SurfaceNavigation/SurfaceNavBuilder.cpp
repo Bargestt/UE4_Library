@@ -21,28 +21,61 @@ const FIntVector FSurfaceNavBuilder::EdgeToCellOffset[12] =
 	FIntVector(0, 1, 0)
 };
 
+DECLARE_CYCLE_STAT(TEXT("SurfaceNavigation ~ Build"), STAT_Build, STATGROUP_SurfaceNavigation);
+DECLARE_CYCLE_STAT(TEXT("SurfaceNavigation ~ CleanUp"), STAT_CleanUp, STATGROUP_SurfaceNavigation);
 
+DECLARE_DWORD_COUNTER_STAT(TEXT("SurfaceNavigation ~ CellsNumber"), STAT_CellsNumber, STATGROUP_SurfaceNavigation);
 
 bool FSurfaceNavBuilder::BuildGraph(const TArray<FVector4>& Points, const FIntVector& Dimensions, float SurfaceValue)
 {
 	if (BuildGraph_Internal(Points, Dimensions, SurfaceValue, AllEdges))
 	{
-		Finish();
+		CleanUp();
+		SaveTarget.SetGraph(AllEdges, Dimensions);
 		return true;
 	}
 
 	return false;
 }
 
-void FSurfaceNavBuilder::Finish()
+void FSurfaceNavBuilder::CleanUp()
 {
-	SaveTarget.Graph = MoveTemp(AllEdges);
-	SaveTarget.GridSize = Dimensions;
+	SCOPE_CYCLE_COUNTER(STAT_CleanUp);
+
+	TMap<int, int> EdgeIndexChange;
+
+	TArray<FEdgeData> NewEdges;
+	for (int Index = 0; Index < AllEdges.Num() ; Index++)
+	{
+		FEdgeData& Edge = AllEdges[Index];
+
+		if (Edge.IsInitialized())
+		{
+			int NewIndex = NewEdges.Add(Edge);
+			EdgeIndexChange.Add(Index, NewIndex);
+		}
+	}
+
+	for (int Index = 0; Index < NewEdges.Num() ; Index++)
+	{
+		FEdgeData& Edge = NewEdges[Index];
+		for (int j = 0; j < Edge.ConnectedEdges.Num() ; j++)
+		{
+			Edge.ConnectedEdges[j] = EdgeIndexChange[Edge.ConnectedEdges[j]];
+		}
+	}
+
+	AllEdges = MoveTemp(NewEdges);
 }
 
+
+
 bool FSurfaceNavBuilder::BuildGraph_Internal(const TArray<FVector4>& Points, const FIntVector& PointsDimensions, float SurfaceValue, TArray<FEdgeData>& OutEdges)
-{
+{	
 	if (Points.Num() < PointsDimensions.X*PointsDimensions.Y*PointsDimensions.Z) return false;
+
+	SCOPE_CYCLE_COUNTER(STAT_Build);
+	SET_DWORD_STAT(STAT_CellsNumber, PointsDimensions.X*PointsDimensions.Y*PointsDimensions.Z);
 
 	Dimensions = PointsDimensions;
 
@@ -51,7 +84,7 @@ bool FSurfaceNavBuilder::BuildGraph_Internal(const TArray<FVector4>& Points, con
 	auto GetPointIndex = [SizeX, SizeXY](int x, int y, int z) { return x + y * SizeX + z * SizeXY; };	
 
 	StorageOffset = Dimensions.X*Dimensions.Y*Dimensions.Z;
-
+	
 	FIntVector CellsNum = Dimensions - FIntVector(1);
 	int LastCellIndex = GetEdgeIndexGlobal(CellsNum - FIntVector(1), 10) + 1;
 	OutEdges.Init(FEdgeData(), LastCellIndex);  // will have some free space though

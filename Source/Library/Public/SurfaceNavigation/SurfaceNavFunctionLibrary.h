@@ -20,5 +20,9 @@ class LIBRARY_API USurfaceNavFunctionLibrary : public UBlueprintFunctionLibrary
 
 public:
 
+
+
+
+
 	static void DrawSurfaceGraph(const UObject* WorldContext, const FTransform& Transform, const FSurfaceNavLocalData& NavData, float Duration = 5, FColor LinkColor = FColor::Green, FColor NodeColor = FColor::Blue);
 };
