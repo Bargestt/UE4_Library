@@ -9,10 +9,10 @@
 class UBoxComponent;
 
 /**
- * Basic SUrface Navigation volume
+ * Basic Surface Navigation volume
  * Requires NavigationSystem actor in world to work
  */
-UCLASS(hidecategories = (Object, Display, Rendering, Physics, Input, Blueprint), autoExpandCategories=("Sampler"), ConversionRoot, NotBlueprintable)
+UCLASS(hidecategories = (Object, Display, Rendering, Physics, Input, Blueprint), ConversionRoot, NotBlueprintable)
 class LIBRARY_API ASurfaceNavigationVolume : public AActor
 {
 	GENERATED_BODY()
