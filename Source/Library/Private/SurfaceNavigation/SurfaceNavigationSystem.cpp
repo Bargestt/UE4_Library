@@ -74,9 +74,12 @@ void USurfaceNavigationSystem::PostInitProperties()
 		VolumeAdded(Cast<ASurfaceNavigationVolume>(v));
 	}
 }
-
+DECLARE_CYCLE_STAT(TEXT("SurfaceNavigation ~ FindPath"), STAT_FindPath, STATGROUP_SurfaceNavigation);
+DECLARE_DWORD_COUNTER_STAT(TEXT("SurfaceNavigation ~ PathLength"), STAT_PathLength, STATGROUP_SurfaceNavigation);
 void USurfaceNavigationSystem::FindPathSync(const FVector& From, const FVector& To, FSurfacePathfindingResult& OutResult, FSurfacePathfindingParams Parameters) const
 {
+	SCOPE_CYCLE_COUNTER(STAT_FindPath);
+
 	const FSurfaceNavigationBox* SharedBox = FindSharedBox(From, To);
 	if (SharedBox == nullptr)
 	{
@@ -85,10 +88,13 @@ void USurfaceNavigationSystem::FindPathSync(const FVector& From, const FVector& 
 		return;
 	}	
 
+
 	const FSurfaceNavLocalData& NavData = SharedBox->NavData;
+	
 
 	int32 EdgeFrom = NavData.FindClosestEdgeIndex(SharedBox->ToLocal(From));
 	int32 EdgeTo = NavData.FindClosestEdgeIndex(SharedBox->ToLocal(To));
+	
 
 	if (EdgeFrom < 0)
 	{
@@ -100,9 +106,9 @@ void USurfaceNavigationSystem::FindPathSync(const FVector& From, const FVector& 
 	bool FindPartial = EdgeTo < 0;
 
 	FSurfacePathfindResult Result = NavData.FindPath(EdgeFrom, EdgeTo);
+	SET_DWORD_STAT(STAT_PathLength, Result.Path.Num());
 
-	OutResult = FSurfacePathfindingResult(Result, NavData, SharedBox->BoundingBox.GetCenter());
-
+	OutResult = FSurfacePathfindingResult(Result, NavData, SharedBox->BoundingBox.GetCenter());	
 }
 
 
