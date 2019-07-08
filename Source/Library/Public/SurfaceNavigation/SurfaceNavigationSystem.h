@@ -9,6 +9,11 @@
 #include "SurfaceNavLocalData.h"
 #include "SurfaceNavigationSystem.generated.h"
 
+class ASurfaceNavigationVolume;
+class USurfaceSamplerBase;
+struct FEdgeData;
+struct FSamplerResult;
+
 
 
 
@@ -23,6 +28,51 @@ USTRUCT(BlueprintType)
 struct LIBRARY_API FSurfacePathfindingResult
 {
 	GENERATED_BODY()
+
+	static const FSurfacePathfindingResult Failure;
+public:
+	UPROPERTY(BlueprintReadOnly, Category = "PathfindResult")
+		bool IsSuccess;
+	UPROPERTY(BlueprintReadOnly, Category = "PathfindResult")
+		bool IsPartial;
+	UPROPERTY(BlueprintReadOnly, Category = "PathfindResult")
+		TArray<FVector> PathLocal;
+
+
+	FSurfacePathfindingResult()
+		: IsSuccess(false)
+		, IsPartial(false)
+	{}
+
+	FSurfacePathfindingResult(const FSurfacePathfindResult& Result, const FSurfaceNavLocalData& NavData, const FVector& Center)
+		: IsSuccess(Result.IsSuccess())
+		, IsPartial(Result.IsPartial())		
+		, PathLocal(NavData.ToLocations(Result.Path, Center))
+	{}
+};
+
+
+struct FSurfaceNavigationBox
+{	
+	uint32 BoxID;
+
+	FBox BoundingBox;
+
+	FSurfaceNavLocalData NavData;
+
+	FSurfaceNavigationBox()
+	{
+		BoxID = -1;
+		BoundingBox = FBox(FVector(0), FVector(0));
+		NavData = FSurfaceNavLocalData();
+	}
+
+	bool operator == (const FSurfaceNavigationBox& Other) const { return BoxID == Other.BoxID; }
+
+	bool IsValid() const {	return NavData.GetGraph().Num(); }
+
+	FVector ToLocal(const FVector& World) const { return World - BoundingBox.GetCenter(); }
+	FVector ToWorld(const FVector& Local) const { return Local + BoundingBox.GetCenter(); }
 };
 
 
@@ -35,26 +85,69 @@ class LIBRARY_API USurfaceNavigationSystem : public UObject
 {
 	GENERATED_BODY()
 
-	UPROPERTY(VisibleAnywhere, Category = "NavigationSystem")
-	FString Info;
+	UPROPERTY(VisibleAnywhere)
+	FString Info;	
 
+	UPROPERTY(VisibleAnywhere)
+	int VolumesNum;
 
+	/** Use shared sample parameters for every volume */
+	UPROPERTY(EditInstanceOnly, meta = (AllowPrivateAccess))
+	bool OverrideLocalSamplers;
 
+	UPROPERTY(EditInstanceOnly, Instanced, meta = (AllowPrivateAccess, EditCondition="OverrideLocalSamplers"))
+	USurfaceSamplerBase* Sampler;
 
-	FSurfaceNavLocalData NavigationData;
+	UPROPERTY(EditInstanceOnly, meta = (AllowPrivateAccess))
+	float SurfaceValue;
+
+	UPROPERTY(EditInstanceOnly, meta = (AllowPrivateAccess))
+	bool ShowGraph;
+
 
 public:
 	USurfaceNavigationSystem();
 
+	virtual void PostInitProperties() override;
+
 	void FindPathSync(const FVector& From, const FVector& To, FSurfacePathfindingResult& OutResult, FSurfacePathfindingParams Parameters) const;
+
+	bool GetClosestNodeLocation(const FVector& Location, FVector& OutLocation) const;
+
+
+	void VolumeAdded(ASurfaceNavigationVolume* Volume);
+	void VolumeUpdated(ASurfaceNavigationVolume* Volume);
+	void VolumeRemoved(ASurfaceNavigationVolume* Volume);	
+
+	UFUNCTION(CallInEditor)
+	void DrawGraph() const;
+	
+	void RebuildGraph();
+
+
+private:
+	typedef uint32 NavBoxID;
+
+	TMap<NavBoxID, FSurfaceNavigationBox> Volumes;
+
+	FSurfaceNavigationBox* FindBoxByID(NavBoxID BoxID);
+	void RemoveBoxByID(NavBoxID BoxID);
+
+
+	void BoxChanged(NavBoxID BoxID);
+
+	DECLARE_DELEGATE_TwoParams(FSamplerFinished, FSamplerResult, NavBoxID);
+	void SamplerFinished(FSamplerResult Result, NavBoxID BoxID);
+
+protected:
+	const FSurfaceNavigationBox* FindBox(const FVector& Location) const;
+
+	const FSurfaceNavigationBox* FindSharedBox(const FVector& Location1, const FVector& Location2) const;
+
 
 
 
 public:
 
-	UFUNCTION(BlueprintCallable, Category = "SurfaceNavigation", meta = (WorldContext = "WorldContextObject"))
-	static USurfaceNavigationSystem* GetNavigationSystem(const UObject* WorldContextObject);
-
-	UFUNCTION(BlueprintCallable, Category = "SurfaceNavigation", meta = (WorldContext = "WorldContextObject"))
-	static void FindPathSync(const UObject* WorldContextObject, const FVector& From, const FVector& To, FSurfacePathfindingResult& OutResult, FSurfacePathfindingParams Parameters);
+	
 };

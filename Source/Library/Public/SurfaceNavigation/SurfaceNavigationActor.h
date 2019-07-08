@@ -13,7 +13,6 @@ class USurfaceNavigationSystem;
 
 
 
-
 /**
  * 
  */
@@ -29,12 +28,21 @@ class LIBRARY_API ASurfaceNavigationActor : public AActor
 #endif // 
 
 
-	UPROPERTY(EditInstanceOnly, Instanced, Category = "SurfaceNavigation", meta = (AllowPrivateAccess))
-	USurfaceNavigationSystem* NavigationSystem;
+	UPROPERTY(VisibleAnywhere, Instanced, Category = "SurfaceNavigation", meta = (AllowPrivateAccess))
+	USurfaceNavigationSystem* SurfaceNavigationSystem;
 
 public:
 	ASurfaceNavigationActor();
 
+	UFUNCTION(CallInEditor)
+	void ShowGraph() const;
 
-	FORCEINLINE USurfaceNavigationSystem* GetNavigationSystem() const { return NavigationSystem; }
+	UFUNCTION(CallInEditor)
+	void RebuildGraph();
+
+
+	FORCEINLINE USurfaceNavigationSystem* GetNavigationSystem() const { return SurfaceNavigationSystem; }
 };
+
+
+

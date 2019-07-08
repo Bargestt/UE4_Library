@@ -35,7 +35,7 @@ bool FEdgeFinderMap::IsReady() const
 
 bool FEdgeFinderMap::Rebuild()
 {
-	MapCellSize = NavData.GetBuildGridCellSize();
+	MapCellSize = 50; // NavData.GetBuildGridCellSize();
 
 	if (MapCellSize <= 0)
 	{

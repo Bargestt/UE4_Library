@@ -36,8 +36,8 @@ struct FSurfacePathfindResult
 	int32 From;
 	int32 To;	
 
-	bool IsPartial() const { return Path.Num() > 0 && !IsSuccess(); }
-	bool IsSuccess() const { return Path.Last() == To; }
+	bool IsPartial() const { return Path.Num() > 0 && Path.Last() != To; }
+	bool IsSuccess() const { return Path.Num() > 0 && Path.Last() == To; }
 };
 
 
@@ -52,26 +52,10 @@ class LIBRARY_API FSurfaceNavLocalData
 {
 	TArray<FEdgeData> Graph;
 
-	FBox GraphBox;
-
-	TUniquePtr<FEdgeFinder> EdgeFinder;
-
-	   
-	FTransform Origin;
-
-	FIntVector BuildGridDimensions;
-
-	float BuildGridCellSize;
-	
 public:
-	FSurfaceNavLocalData() {
-		InitFinder();
-	};
-	~FSurfaceNavLocalData() {};
-
-	const TArray<FEdgeData>& GetGraph() const { return Graph; }
-
-	const FEdgeData& GetEdge(int32 Index) const { return Graph[Index]; }	
+	FSurfaceNavLocalData() {};
+	~FSurfaceNavLocalData() {};	
+	
 
 	FSurfacePathfindResult FindPath(int32 FromNode, int32 ToNode) const;
 	
@@ -82,29 +66,13 @@ public:
 	// FGraphAStar: TGraph
 	typedef int32 FNodeRef;
 
-	int32 GetNeighbourCount(FNodeRef NodeRef) const { return GetEdge(NodeRef).ConnectedEdges.Num(); }
+	int32 GetNeighbourCount(FNodeRef NodeRef) const { return GetEdgeData(NodeRef).ConnectedEdges.Num(); }
 	bool IsValidRef(FNodeRef NodeRef) const { return Graph.IsValidIndex(NodeRef); }
-	FNodeRef GetNeighbour(const FNodeRef NodeRef, const int32 NeiIndex) const { return GetEdge(NodeRef).ConnectedEdges[NeiIndex]; }	
+	FNodeRef GetNeighbour(const FNodeRef NodeRef, const int32 NeiIndex) const { return GetEdgeData(NodeRef).ConnectedEdges[NeiIndex]; }	
 	//////////////////////////////////////////////////////////////////////////
 
+	bool IsNodeTraversable(int32 Index) const { return Graph.IsValidIndex(Index) && GetEdgeData(Index).IsInitialized(); }	
 
-	bool IsNodeTraversable(int32 Index) const { return Graph.IsValidIndex(Index) && GetEdge(Index).IsInitialized(); }
-	
-	int32 FindClosestEdgeIndex(const FVector& Location) const;
-
-	FVector ToLocation(int32 EdgeIndex) const;
-
-	bool IsInside(const FVector& Location) const;
-	
-
-	FIntVector GetBuildGridDimensions() const { return BuildGridDimensions; }
-
-	float GetBuildGridCellSize() const { return BuildGridCellSize; }
-
-protected:
-	void InitFinder();
-
-	void GraphChanged();
 
 private:
 
@@ -112,8 +80,24 @@ private:
 	void SetGraph(TArray<FEdgeData> NewGraph, FIntVector NewDimensions)
 	{
 		Graph = MoveTemp(NewGraph);
-		BuildGridDimensions = NewDimensions;
-		GraphChanged();
 	}
 
+
+public:
+	//////////////////////////////////////////////////////////////////////////
+	// Getters
+	// 
+
+	const TArray<FEdgeData>& GetGraph() const { return Graph; }
+	
+	/** Unsafe access */
+	const FEdgeData& GetEdgeData(int32 Index) const { return Graph[Index]; }
+
+
+	int32 FindClosestEdgeIndex(const FVector& Location) const;
+
+	FVector ToLocation(int32 EdgeIndex) const;
+
+	TArray<FVector> ToLocations(const TArray<int32>& EdgeIndices, FVector Center = FVector::ZeroVector) const;
+	
 };

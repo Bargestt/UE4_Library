@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 
+#include "SurfaceNavigation.h"
+
 DECLARE_STATS_GROUP(TEXT("SurfaceNavigation"), STATGROUP_SurfaceNavigation, STATCAT_Advanced);
 
 struct FEdgeData;
@@ -29,24 +31,24 @@ class LIBRARY_API FSurfaceNavBuilder
 	TArray<FEdgeData> AllEdges;
 
 	FIntVector Dimensions;
-	
-	// Offset for storing edges, 0 offset for X edges, 1 Offset for Y edges, 2 Offsets for Z edges
+
+	// Offset for storing edges, 0*StorageOffset offset for X edges, 1*StorageOffset Offset for Y edges, 2*StorageOffset Offsets for Z edges
 	int32 StorageOffset;
 
-	FSurfaceNavLocalData& SaveTarget;
+public:
+	float SurfaceValue;
 
 public:
-	FSurfaceNavBuilder(FSurfaceNavLocalData& SaveTarget) : SaveTarget(SaveTarget){}
+	FSurfaceNavBuilder() : SurfaceValue(.5f) {}
 
+	bool BuildGraph(const TArray<FVector4>& Points, const FIntVector& Dimensions, FSurfaceNavLocalData& SaveTarget);
 
+	bool BuildGraph(const TArray<FVector4>& Points, const FIntVector& Dimensions, TArray<FEdgeData>& OutGraph);
 
-	bool BuildGraph(const TArray<FVector4>& Points, const FIntVector& Dimensions, float SurfaceValue);
 
 protected:
 
 	void CleanUp();
-
-
 
 	bool BuildGraph_Internal(const TArray<FVector4>& Points, const FIntVector& Dimensions, float SurfaceValue, TArray<FEdgeData>& OutEdges);
 

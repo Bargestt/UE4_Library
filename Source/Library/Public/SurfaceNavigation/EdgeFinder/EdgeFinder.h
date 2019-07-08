@@ -19,7 +19,7 @@ protected:
 
 public:
 
-	FEdgeFinder(const FSurfaceNavLocalData& NavData) : NavData(NavData){ }
+	FEdgeFinder(const FSurfaceNavLocalData& NavData) : NavData(NavData){ }	
 
 	virtual ~FEdgeFinder() {}
 

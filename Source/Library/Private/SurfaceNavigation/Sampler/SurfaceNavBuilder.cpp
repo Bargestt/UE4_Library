@@ -26,7 +26,21 @@ DECLARE_CYCLE_STAT(TEXT("SurfaceNavigation ~ CleanUp"), STAT_CleanUp, STATGROUP_
 
 DECLARE_DWORD_COUNTER_STAT(TEXT("SurfaceNavigation ~ CellsNumber"), STAT_CellsNumber, STATGROUP_SurfaceNavigation);
 
-bool FSurfaceNavBuilder::BuildGraph(const TArray<FVector4>& Points, const FIntVector& Dimensions, float SurfaceValue)
+
+
+bool FSurfaceNavBuilder::BuildGraph(const TArray<FVector4>& Points, const FIntVector& Dimensions, TArray<FEdgeData>& OutGraph)
+{
+	if (BuildGraph_Internal(Points, Dimensions, SurfaceValue, AllEdges))
+	{
+		CleanUp();
+		OutGraph = MoveTemp(AllEdges);
+		return true;
+	}
+
+	return false;
+}
+
+bool FSurfaceNavBuilder::BuildGraph(const TArray<FVector4>& Points, const FIntVector& Dimensions, FSurfaceNavLocalData& SaveTarget)
 {
 	if (BuildGraph_Internal(Points, Dimensions, SurfaceValue, AllEdges))
 	{
@@ -79,9 +93,10 @@ bool FSurfaceNavBuilder::BuildGraph_Internal(const TArray<FVector4>& Points, con
 
 	Dimensions = PointsDimensions;
 
+
 	int SizeX = Dimensions.X;
-	int	SizeXY = Dimensions.Y * Dimensions.Z;
-	auto GetPointIndex = [SizeX, SizeXY](int x, int y, int z) { return x + y * SizeX + z * SizeXY; };	
+	int	SizeXY = Dimensions.X * Dimensions.Y;
+	auto GetPointIndex = [SizeX, SizeXY](int x, int y, int z) {	return x + y * SizeX + z * SizeXY; };
 
 	StorageOffset = Dimensions.X*Dimensions.Y*Dimensions.Z;
 	
