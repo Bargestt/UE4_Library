@@ -104,16 +104,14 @@ public:
 
 	static void GenerateMesh(const TArray<FVector4>& Points, const FIntVector& Dimestions, float SurfaceLevel, TArray<FVector>& OutVertices, TArray<int32>& OutIndices, const FMeshGenerationParams& Params = FMeshGenerationParams::DefaultMeshGenerationParams);
 
-
-
-protected:
-
+	   
 
 	static FORCEINLINE FVector VertexLerp(float SurfaceLevel, FVector4 P1, FVector4 P2)
 	{
 		float t = (SurfaceLevel - P1.W) / (P2.W - P1.W);
 		return FMath::Lerp(FVector(P1), FVector(P2), t);
 	}
+
 
 	struct FCell
 	{
