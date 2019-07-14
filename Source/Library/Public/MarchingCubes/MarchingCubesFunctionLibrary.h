@@ -66,11 +66,14 @@ class LIBRARY_API UMarchingCubesFunctionLibrary : public UBlueprintFunctionLibra
 	GENERATED_BODY()
 
 public:
-	static const int EdgeTable[256];
-	static const int TriTable[256][16];
+	//Bitmask of edges intersected by isosurface
+	static const uint16 EdgeTable[256];
+
+	//Triangles for configuration
+	static const int8 TriTable[256][16];
 
 	// index of both vertices of edge in cell
-	static const int Edges[12][2];
+	static const int8 Edges[12][2];
 
 
 
@@ -81,9 +84,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Utility|MarchingCubes", meta=(WorldContext="WorldContext"))
 	static void DrawPoints(const UObject* WorldContext, const FTransform& OriginTransform, const FPointsArray3D& PointsData, float MaxValue = 1);
-
-
-
 
 
 	/**

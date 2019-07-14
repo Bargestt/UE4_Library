@@ -40,9 +40,9 @@ AMarchingCubesDisplay::AMarchingCubesDisplay()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 	
-	Size = 50;
+	CubeSize = 50;
 	BoxFrame = CreateDefaultSubobject<UBoxComponent>(TEXT("Bounds"));
-	BoxFrame->SetBoxExtent(FVector(Size));
+	BoxFrame->SetBoxExtent(FVector(CubeSize));
 	RootComponent = BoxFrame;
 
 	Mesh = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("DisplayMesh"));
@@ -54,7 +54,6 @@ AMarchingCubesDisplay::AMarchingCubesDisplay()
 	{
 		MeshMaterial = MeshMat.Object;
 	}	
-
 	ConstructorHelpers::FObjectFinder<UMaterialInterface> RedMat(TEXT("Material'/Engine/EditorMaterials/WidgetMaterial_X.WidgetMaterial_X'"));
 	if (RedMat.Succeeded())
 	{
@@ -71,18 +70,17 @@ AMarchingCubesDisplay::AMarchingCubesDisplay()
 		BlueMaterial = BlueMat.Object;
 	}
 
-	CubeVertices = { 0,0,0,0, 0,0,0,0 };
+	CubeVertexStatus = { 0,0,0,0, 0,0,0,0 };
+	CubeVertices = {
+		{-CubeSize,  CubeSize, -CubeSize},
+		{ CubeSize,  CubeSize, -CubeSize},
+		{ CubeSize, -CubeSize, -CubeSize},
+		{-CubeSize, -CubeSize, -CubeSize},
 
-	Vertices = {
-		{-Size,  Size, -Size},
-		{ Size,  Size, -Size},
-		{ Size, -Size, -Size},
-		{-Size, -Size, -Size},
-
-		{-Size,  Size,  Size},
-		{ Size,  Size,  Size},
-		{ Size, -Size,  Size},
-		{-Size, -Size,  Size}
+		{-CubeSize,  CubeSize,  CubeSize},
+		{ CubeSize,  CubeSize,  CubeSize},
+		{ CubeSize, -CubeSize,  CubeSize},
+		{-CubeSize, -CubeSize,  CubeSize}
 	};	
 }
 
@@ -92,11 +90,10 @@ void AMarchingCubesDisplay::OnConstruction(const FTransform& Transform)
 
 	Mesh->ClearAllMeshSections();
 	
-	DrawConfig(CubeVertices);
+	DrawConfig(CubeVertexStatus);
 	
 
 	int Config = UMarchingCubesFunctionLibrary::EdgeTable[ConfigNumber];
-
 	DrawConfig(
 		{ 
 			(bool)(Config & (1 << 0)),
@@ -108,10 +105,10 @@ void AMarchingCubesDisplay::OnConstruction(const FTransform& Transform)
 			(bool)(Config & (1 << 6)),
 			(bool)(Config & (1 << 7))
 		}
-		, FVector(0, Size * 2, 0)
+		, FVector(0, CubeSize * 2.5f, 0)
 	);
 	
-
+	// Marching cubes unique configurations. Others 200+ are rotation/mirror of this
 	TArray<TArray<bool>> BaseCases
 	{
 		{ 1,0,0,0, 0,0,0,0 },
@@ -133,16 +130,13 @@ void AMarchingCubesDisplay::OnConstruction(const FTransform& Transform)
 		{ 0,1,1,1, 0,0,0,1 }
 	};
 		
-	float Width = 2000;
-	float HeightOffset = -150;
 
-	float Step = Width / BaseCases.Num();
-	float Base = -Width / 2;
+	float Step = CubeSize*2.3f;
+	float Base = -Step * BaseCases.Num()/2;
 	for (int Index = 0; Index < BaseCases.Num(); Index++)
 	{
 		TArray<bool>& Case = BaseCases[Index];
-
-		DrawConfig(Case, FVector(0, Index*Step + Base, HeightOffset));
+		DrawConfig(Case, FVector(0, Index*Step + Base, -CubeSize*5));
 	}	
 
 	if (bShowAll)
@@ -172,14 +166,14 @@ void AMarchingCubesDisplay::DrawConfig(TArray<bool> Config, FVector Offset /*= F
 	UMarchingCubesFunctionLibrary::Poligonise
 	(
 		{
-		FVector4(Vertices[0]+Offset, Config[0] ? 1 : 0),
-		FVector4(Vertices[1]+Offset, Config[1] ? 1 : 0),
-		FVector4(Vertices[2]+Offset, Config[2] ? 1 : 0),
-		FVector4(Vertices[3]+Offset, Config[3] ? 1 : 0),
-		FVector4(Vertices[4]+Offset, Config[4] ? 1 : 0),
-		FVector4(Vertices[5]+Offset, Config[5] ? 1 : 0),
-		FVector4(Vertices[6]+Offset, Config[6] ? 1 : 0),
-		FVector4(Vertices[7]+Offset, Config[7] ? 1 : 0)
+			FVector4(CubeVertices[0] + Offset, Config[0] ? 1 : 0),
+			FVector4(CubeVertices[1] + Offset, Config[1] ? 1 : 0),
+			FVector4(CubeVertices[2] + Offset, Config[2] ? 1 : 0),
+			FVector4(CubeVertices[3] + Offset, Config[3] ? 1 : 0),
+			FVector4(CubeVertices[4] + Offset, Config[4] ? 1 : 0),
+			FVector4(CubeVertices[5] + Offset, Config[5] ? 1 : 0),
+			FVector4(CubeVertices[6] + Offset, Config[6] ? 1 : 0),
+			FVector4(CubeVertices[7] + Offset, Config[7] ? 1 : 0)
 		}
 	, 0.5f, Verts, Indices);
 
@@ -188,20 +182,18 @@ void AMarchingCubesDisplay::DrawConfig(TArray<bool> Config, FVector Offset /*= F
 	float BoxSize = 3;
 	for (int Index = 0; Index < 8 ; Index++)
 	{
-		GetBoxMesh(Vertices[Index] + Offset, BoxSize, Verts, Indices);
+		GetBoxMesh(CubeVertices[Index] + Offset, BoxSize, Verts, Indices);
 		DrawMesh(Verts, Indices, Config[Index] ? RedMaterial : GreenMaterial);
-	}
-
-	
+	}	
 }
 
 
 
 void AMarchingCubesDisplay::DrawAllCases()
 {
-	float Step = Size * 2.3f;
+	float Step = CubeSize * 2.3f;
 	float Base = -Step * 8;
-	float HeightOffset = -Size * 15;
+	float HeightOffset = -CubeSize * 15;
 
 	for (int X = 0; X < 16; X++)
 	{
@@ -209,20 +201,15 @@ void AMarchingCubesDisplay::DrawAllCases()
 		{
 			int CaseIndex = X * 16 + Y;
 			FVector Loc = FVector(X*Step + Base, Y*Step + Base, HeightOffset);
-			DrawConfig(
-				{
-					(bool)(CaseIndex & (1 << 0)),
-					(bool)(CaseIndex & (1 << 1)),
-					(bool)(CaseIndex & (1 << 2)),
-					(bool)(CaseIndex & (1 << 3)),
-					(bool)(CaseIndex & (1 << 4)),
-					(bool)(CaseIndex & (1 << 5)),
-					(bool)(CaseIndex & (1 << 6)),
-					(bool)(CaseIndex & (1 << 7))
-				}
-				, Loc
-			);
 
+			TArray<bool> CaseConfig;
+			CaseConfig.Init(false, 8);
+			for (int Index = 0; Index < 8 ; Index++)
+			{
+				CaseConfig[Index] = (bool)(CaseIndex & (1 << Index));
+			}
+			DrawConfig(CaseConfig, Loc);
+			//Only for play mode
 			DrawDebugString(GetWorld(), GetActorTransform().TransformPosition(Loc), FString::FromInt(CaseIndex));
 		}
 	}
@@ -243,7 +230,7 @@ void AMarchingCubesDisplay::DrawLine(FVector From, FVector To, float LineSize /*
 	TArray<FVector> Verts;
 	TArray<int32> Indices;
 
-	GetLineMesh(From, To, Size, Verts, Indices);
+	GetLineMesh(From, To, CubeSize, Verts, Indices);
 	DrawMesh(Verts, Indices, MeshMaterial);
 }
 

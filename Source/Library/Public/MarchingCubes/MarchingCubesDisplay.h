@@ -47,9 +47,9 @@ class LIBRARY_API AMarchingCubesDisplay : public AActor
 	UPROPERTY()
 	UBoxComponent* BoxFrame;	
 
+
 	UPROPERTY()
 	UMaterialInterface* MeshMaterial;
-
 	UPROPERTY()
 	UMaterialInterface* RedMaterial;
 	UPROPERTY()
@@ -57,20 +57,23 @@ class LIBRARY_API AMarchingCubesDisplay : public AActor
 	UPROPERTY()
 	UMaterialInterface* BlueMaterial;
 
-	TArray<FVector, TFixedAllocator<8>> Vertices;
 
-	float Size;
+
+	TArray<FVector, TFixedAllocator<8>> CubeVertices;
+
+	float CubeSize;
+
 
 
 	UPROPERTY()
-		TArray<UMaterialInterface*> Materials;
+	TArray<UMaterialInterface*> Materials;
 
 	FDrawContext Context;
 
 public:
-
+	
 	UPROPERTY(EditAnywhere, Category = "Configuration", EditFixedSize)
-	TArray<bool> CubeVertices;
+	TArray<bool> CubeVertexStatus;
 
 	UPROPERTY(EditAnywhere, Category = "Configuration", meta=(ClampMin = 0, ClampMax = 255))
 	int32 ConfigNumber;
@@ -87,6 +90,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
 
 private:
 	
