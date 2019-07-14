@@ -75,6 +75,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Configuration", meta=(ClampMin = 0, ClampMax = 255))
 	int32 ConfigNumber;
 
+	UPROPERTY(EditAnywhere, Category = "Configuration")
+	bool bShowAll;
+
 public:	
 	// Sets default values for this actor's properties
 	AMarchingCubesDisplay();
@@ -82,9 +85,14 @@ public:
 public:
 	virtual void OnConstruction(const FTransform& Transform) override;
 
+protected:
+	virtual void BeginPlay() override;
+
 private:
 	
 	void DrawConfig(TArray<bool> Config, FVector Offset = FVector(0));
+
+	void DrawAllCases();
 
 
 
@@ -101,4 +109,6 @@ private:
 	static void GetBoxMesh(FVector Pos, float Size, TArray<FVector>& OutVerts, TArray<int32>& OutIndices);
 
 	void ApplyContext(FDrawContext& Context);
+
+
 };

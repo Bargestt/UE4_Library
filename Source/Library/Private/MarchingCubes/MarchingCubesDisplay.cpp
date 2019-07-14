@@ -145,7 +145,23 @@ void AMarchingCubesDisplay::OnConstruction(const FTransform& Transform)
 		DrawConfig(Case, FVector(0, Index*Step + Base, HeightOffset));
 	}	
 
+	if (bShowAll)
+	{
+		DrawAllCases();
+	}
+
 	ApplyContext(Context);
+}
+
+void AMarchingCubesDisplay::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (bShowAll)
+	{
+		DrawAllCases();
+		ApplyContext(Context);
+	}
 }
 
 void AMarchingCubesDisplay::DrawConfig(TArray<bool> Config, FVector Offset /*= FVector(0)*/)
@@ -175,9 +191,42 @@ void AMarchingCubesDisplay::DrawConfig(TArray<bool> Config, FVector Offset /*= F
 		GetBoxMesh(Vertices[Index] + Offset, BoxSize, Verts, Indices);
 		DrawMesh(Verts, Indices, Config[Index] ? RedMaterial : GreenMaterial);
 	}
+
+	
 }
 
 
+
+void AMarchingCubesDisplay::DrawAllCases()
+{
+	float Step = Size * 2.3f;
+	float Base = -Step * 8;
+	float HeightOffset = -Size * 15;
+
+	for (int X = 0; X < 16; X++)
+	{
+		for (int Y = 0; Y < 16; Y++)
+		{
+			int CaseIndex = X * 16 + Y;
+			FVector Loc = FVector(X*Step + Base, Y*Step + Base, HeightOffset);
+			DrawConfig(
+				{
+					(bool)(CaseIndex & (1 << 0)),
+					(bool)(CaseIndex & (1 << 1)),
+					(bool)(CaseIndex & (1 << 2)),
+					(bool)(CaseIndex & (1 << 3)),
+					(bool)(CaseIndex & (1 << 4)),
+					(bool)(CaseIndex & (1 << 5)),
+					(bool)(CaseIndex & (1 << 6)),
+					(bool)(CaseIndex & (1 << 7))
+				}
+				, Loc
+			);
+
+			DrawDebugString(GetWorld(), GetActorTransform().TransformPosition(Loc), FString::FromInt(CaseIndex));
+		}
+	}
+}
 
 void AMarchingCubesDisplay::DrawMesh(const TArray<FVector>& Verts, const TArray<int32>& Indices, UMaterialInterface* DrawMaterial /*= nullptr*/)
 {
@@ -305,3 +354,4 @@ void AMarchingCubesDisplay::ApplyContext(FDrawContext& Context)
 
 	Context.Sections.Empty();
 }
+
