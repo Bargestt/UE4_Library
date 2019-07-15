@@ -4,7 +4,7 @@
 #include "DrawDebugHelpers.h"
 
 #pragma region MarchingCubesData
-const int UMarchingCubesFunctionLibrary::EdgeTable[256] = {
+const uint16 UMarchingCubesFunctionLibrary::EdgeTable[256] = {
 0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
 0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
 0x190, 0x99 , 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c,
@@ -37,7 +37,7 @@ const int UMarchingCubesFunctionLibrary::EdgeTable[256] = {
 0x69c, 0x795, 0x49f, 0x596, 0x29a, 0x393, 0x99 , 0x190,
 0xf00, 0xe09, 0xd03, 0xc0a, 0xb06, 0xa0f, 0x905, 0x80c,
 0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0 };
-const int UMarchingCubesFunctionLibrary::TriTable[256][16] =
+const int8 UMarchingCubesFunctionLibrary::TriTable[256][16] =
 {
 	{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 	{0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
@@ -300,7 +300,7 @@ const int UMarchingCubesFunctionLibrary::TriTable[256][16] =
 
 
 
-const int UMarchingCubesFunctionLibrary::Edges[12][2] =
+const int8 UMarchingCubesFunctionLibrary::Edges[12][2] =
 {
 	{0,1}, // bottom edges
 	{1,2},
