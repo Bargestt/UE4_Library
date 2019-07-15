@@ -4,34 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "SimpleMeshDrawingComponent.h"
 #include "MarchingCubesDisplay.generated.h"
 
 class UBoxComponent;
-class UProceduralMeshComponent;
 class UMaterialInterface;
-
-USTRUCT()
-struct FSection
-{
-	GENERATED_BODY()
-	TArray<FVector> Vertices;
-	TArray<int32> Indices;
-};
+class USimpleMeshDrawingComponent;
 
 
-USTRUCT()
-struct FDrawContext
-{
-	GENERATED_BODY()
-
-	UPROPERTY()
-	TMap<UMaterialInterface*, FSection> Sections;
-
-	FDrawContext(){	}
-
-	void DrawMesh(const TArray<FVector>& Verts, const TArray<int32>& Indices, UMaterialInterface* Material);
-
-};
 
 /**
  * Marching cube combination demonstration
@@ -42,7 +22,9 @@ class LIBRARY_API AMarchingCubesDisplay : public AActor
 	GENERATED_BODY()
 
 	UPROPERTY()
-	UProceduralMeshComponent* Mesh;
+	USimpleMeshDrawingComponent* MeshDisplay;	
+
+	FDrawContext DrawContext;
 
 	UPROPERTY()
 	UBoxComponent* BoxFrame;	
@@ -64,11 +46,8 @@ class LIBRARY_API AMarchingCubesDisplay : public AActor
 	float CubeSize;
 
 
-
 	UPROPERTY()
 	TArray<UMaterialInterface*> Materials;
-
-	FDrawContext Context;
 
 public:
 	
@@ -98,21 +77,5 @@ private:
 
 	void DrawAllCases();
 
-
-
-	void DrawMesh(const TArray<FVector>& Verts, const TArray<int32>& Indices, UMaterialInterface* DrawMaterial = nullptr);
-
-	void DrawLine(FVector From, FVector To, float LineSize = 5);
-
-	void DrawBox(FVector Pos, float Size);
-
-	
-	
-	static void GetLineMesh(FVector From, FVector To, float Size, TArray<FVector>& OutVerts, TArray<int32>& OutIndices);
-
-	static void GetBoxMesh(FVector Pos, float Size, TArray<FVector>& OutVerts, TArray<int32>& OutIndices);
-
-	void ApplyContext(FDrawContext& Context);
-
-
+	void DrawMesh(const TArray<FVector>& Verts, const TArray<int32>& Indices, UMaterialInterface* DrawMaterial /*= nullptr*/);
 };
