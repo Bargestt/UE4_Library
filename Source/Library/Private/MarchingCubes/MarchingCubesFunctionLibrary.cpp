@@ -367,6 +367,7 @@ void UMarchingCubesFunctionLibrary::GenerateMesh(const TArray<FVector4>& Points,
 
 	if (CellsX == 0 || CellsY == 0 || CellsZ == 0 || Dimestions.X * Dimestions.Y * Dimestions.Z > Points.Num())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("Dimension mismatch"));
 		return;
 	}
 
@@ -375,7 +376,7 @@ void UMarchingCubesFunctionLibrary::GenerateMesh(const TArray<FVector4>& Points,
 	OutIndices.Reset(Params.EstimatedTriangleNum * 3);
 
 	int SizeX = Dimestions.X;
-	int SizeXY = Dimestions.Y * Dimestions.Z;
+	int SizeXY = Dimestions.X * Dimestions.Y;
 	auto index = [SizeX, SizeXY](int x, int y, int z) { return x + y * SizeX + z * SizeXY; };
 
 	for (int X = 0; X < CellsX; X++)
