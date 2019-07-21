@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 
 #include "SurfaceNavigation.h"
+#include "MarchingCubesBuilder.h"
 
 DECLARE_STATS_GROUP(TEXT("SurfaceNavigation"), STATGROUP_SurfaceNavigation, STATCAT_Advanced);
 
@@ -26,8 +27,6 @@ namespace FSurfaceNavigation
 
 class LIBRARY_API FSurfaceNavBuilder
 {
-	static const FIntVector EdgeToCellOffset[12];	
-
 	TArray<FEdgeData> AllEdges;
 
 	FIntVector Dimensions;
@@ -64,12 +63,14 @@ protected:
 
 	FORCEINLINE int GetEdgeIndexGlobal(const FIntVector& CellCoordinate, int EdgeIndexLocal) const
 	{
-		FIntVector ActualCellCoord = CellCoordinate + EdgeToCellOffset[EdgeIndexLocal];
+		FIntVector ActualCellCoord = CellCoordinate + FMarchingCubesBuilder::EdgeToCubeOffset[EdgeIndexLocal];
 		int Index = ActualCellCoord.X + ActualCellCoord.Y*Dimensions.X + ActualCellCoord.Z*Dimensions.X*Dimensions.Y;
 
 		if (EdgeIndexLocal == 3 || EdgeIndexLocal == 1 || EdgeIndexLocal == 5 || EdgeIndexLocal == 7) Index += StorageOffset;
 		if (EdgeIndexLocal >= 8) Index += 2 * StorageOffset;
 		return Index;
+
+		return 0;
 	}
 
 	static FORCEINLINE FVector VertexLerp(float SurfaceLevel, FVector4 P1, FVector4 P2)

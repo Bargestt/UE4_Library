@@ -3,8 +3,8 @@
 #include "MarchingCubesDisplay.h"
 #include "Components/BoxComponent.h"
 
-#include "MarchingCubesFunctionLibrary.h"
 #include "DrawDebugHelpers.h"
+#include "MarchingCubesBuilder.h"
 
 
 // Sets default values
@@ -66,7 +66,7 @@ void AMarchingCubesDisplay::OnConstruction(const FTransform& Transform)
 	DrawConfig(CubeVertexStatus);
 	
 
-	int Config = UMarchingCubesFunctionLibrary::EdgeTable[ConfigNumber];
+	int Config = FMarchingCubesBuilder::EdgeTable[ConfigNumber];
 	DrawConfig(
 		{ 
 			(bool)(Config & (1 << 0)),
@@ -136,19 +136,19 @@ void AMarchingCubesDisplay::DrawConfig(TArray<bool> Config, FVector Offset /*= F
 	TArray<int32> Indices;
 	TArray<FVector> Verts;
 	
-	UMarchingCubesFunctionLibrary::Poligonise
-	(
-		{
-			FVector4(CubeVertices[0] + Offset, Config[0] ? 1 : 0),
-			FVector4(CubeVertices[1] + Offset, Config[1] ? 1 : 0),
-			FVector4(CubeVertices[2] + Offset, Config[2] ? 1 : 0),
-			FVector4(CubeVertices[3] + Offset, Config[3] ? 1 : 0),
-			FVector4(CubeVertices[4] + Offset, Config[4] ? 1 : 0),
-			FVector4(CubeVertices[5] + Offset, Config[5] ? 1 : 0),
-			FVector4(CubeVertices[6] + Offset, Config[6] ? 1 : 0),
-			FVector4(CubeVertices[7] + Offset, Config[7] ? 1 : 0)
-		}
-	, 0.5f, Verts, Indices);
+	FVector4 Cube[] =
+	{
+		FVector4(CubeVertices[0] + Offset, Config[0] ? 1 : 0),
+		FVector4(CubeVertices[1] + Offset, Config[1] ? 1 : 0),
+		FVector4(CubeVertices[2] + Offset, Config[2] ? 1 : 0),
+		FVector4(CubeVertices[3] + Offset, Config[3] ? 1 : 0),
+		FVector4(CubeVertices[4] + Offset, Config[4] ? 1 : 0),
+		FVector4(CubeVertices[5] + Offset, Config[5] ? 1 : 0),
+		FVector4(CubeVertices[6] + Offset, Config[6] ? 1 : 0),
+		FVector4(CubeVertices[7] + Offset, Config[7] ? 1 : 0)
+	};
+	FMarchingCubesBuilder::PoligonizeSingle(Cube, 0.5f, Verts, Indices);
+	
 
 	DrawMesh(Verts, Indices, MeshMaterial);
 

@@ -2,24 +2,9 @@
 
 #include "SurfaceNavBuilder.h"
 #include "SurfaceNavLocalData.h"
-#include "MarchingCubesFunctionLibrary.h"
 
 
-const FIntVector FSurfaceNavBuilder::EdgeToCellOffset[12] =
-{
-	FIntVector(0, 0, 0),
-	FIntVector(1, 0, 0),
-	FIntVector(0, 1, 0),
-	FIntVector(0, 0, 0),
-	FIntVector(0, 0, 1),
-	FIntVector(1, 0, 1),
-	FIntVector(0, 1, 1),
-	FIntVector(0, 0, 1),
-	FIntVector(0, 0, 0),
-	FIntVector(1, 0, 0),
-	FIntVector(1, 1, 0),
-	FIntVector(0, 1, 0)
-};
+
 
 DECLARE_CYCLE_STAT(TEXT("SurfaceNavigation ~ Build"), STAT_Build, STATGROUP_SurfaceNavigation);
 DECLARE_CYCLE_STAT(TEXT("SurfaceNavigation ~ CleanUp"), STAT_CleanUp, STATGROUP_SurfaceNavigation);
@@ -135,7 +120,7 @@ bool FSurfaceNavBuilder::BuildGraph_Internal(const TArray<FVector4>& Points, con
 
 bool FSurfaceNavBuilder::AddEdgeData(const FCell& Cell, float SurfaceLevel, const FIntVector& Cells, TArray<FEdgeData>& AllEdgesArray)
 {
-	typedef UMarchingCubesFunctionLibrary Lib;
+	typedef FMarchingCubesBuilder Lib;
 
 	int cubeindex = 0;
 	for (int Index = 0; Index < 8; Index++)

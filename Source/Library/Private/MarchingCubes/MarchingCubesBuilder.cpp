@@ -1,10 +1,12 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "MarchingCubesFunctionLibrary.h"
-#include "DrawDebugHelpers.h"
+#include "MarchingCubesBuilder.h"
+
+DEFINE_LOG_CATEGORY(MarchingCubesBuilder);
+
 
 #pragma region MarchingCubesData
-const uint16 UMarchingCubesFunctionLibrary::EdgeTable[256] = {
+const uint16 FMarchingCubesBuilder::EdgeTable[256] =
+{
 0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
 0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
 0x190, 0x99 , 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c,
@@ -37,7 +39,7 @@ const uint16 UMarchingCubesFunctionLibrary::EdgeTable[256] = {
 0x69c, 0x795, 0x49f, 0x596, 0x29a, 0x393, 0x99 , 0x190,
 0xf00, 0xe09, 0xd03, 0xc0a, 0xb06, 0xa0f, 0x905, 0x80c,
 0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0 };
-const int8 UMarchingCubesFunctionLibrary::TriTable[256][16] =
+const int8 FMarchingCubesBuilder::TriTable[256][16] =
 {
 	{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 	{0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
@@ -296,11 +298,7 @@ const int8 UMarchingCubesFunctionLibrary::TriTable[256][16] =
 	{0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 	{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
 };
-
-
-
-
-const int8 UMarchingCubesFunctionLibrary::Edges[12][2] =
+const int8 FMarchingCubesBuilder::Edges[12][2] =
 {
 	{0,1}, // bottom edges
 	{1,2},
@@ -317,124 +315,23 @@ const int8 UMarchingCubesFunctionLibrary::Edges[12][2] =
 	{2,6},
 	{3,7}
 };
+const FIntVector FMarchingCubesBuilder::EdgeToCubeOffset[12] =
+{
+	//Bottom edges
+	FIntVector(0, 0, 0), // owned X 
+	FIntVector(1, 0, 0),
+	FIntVector(0, 1, 0),
+	FIntVector(0, 0, 0), // owned Y
+	//Top edges
+	FIntVector(0, 0, 1),
+	FIntVector(1, 0, 1),
+	FIntVector(0, 1, 1),
+	FIntVector(0, 0, 1),
+	//Vertical edges
+	FIntVector(0, 0, 0), // owned Z
+	FIntVector(1, 0, 0),
+	FIntVector(1, 1, 0),
+	FIntVector(0, 1, 0)
+};
 
 #pragma endregion MarchingCubesData
-
-const FMeshGenerationParams FMeshGenerationParams::DefaultMeshGenerationParams = FMeshGenerationParams();
-
-void UMarchingCubesFunctionLibrary::GenerateMesh(const TArray<TArray<TArray<FVector4>>>& Points, float SurfaceLevel, TArray<FVector>& OutVertices, TArray<int32>& OutIndices, const FMeshGenerationParams& Params /* = FMeshGenerationParams::DefaultMeshGenerationParams*/)
-{
-	int CellsX = Points.Num() - 1;
-	int CellsY = (CellsX > 0) ? Points[0].Num() - 1 : 0;
-	int CellsZ = (CellsY > 0) ? Points[0][0].Num() - 1 : 0;
-
-	if (CellsX == 0 || CellsY == 0 || CellsZ == 0) return;
-
-	OutVertices.Reset(Params.EstimatedTriangleNum * 3);
-	OutIndices.Reset(Params.EstimatedTriangleNum * 3);
-
-	for (int X = 0; X < CellsX; X++)
-	{
-		for (int Y = 0; Y < CellsY; Y++)
-		{
-			for (int Z = 0; Z < CellsZ; Z++)
-			{
-				Poligonise(
-					{
-						Points[X	][Y    ][Z],
-						Points[X + 1][Y	   ][Z],
-						Points[X + 1][Y + 1][Z],
-						Points[X	][Y + 1][Z],
-
-						Points[X	][Y    ][Z + 1],
-						Points[X + 1][Y	   ][Z + 1],
-						Points[X + 1][Y + 1][Z + 1],
-						Points[X	][Y + 1][Z + 1]
-					}, 
-					SurfaceLevel, OutVertices, OutIndices
-				);
-			}
-		}
-	}
-
-}
-
-void UMarchingCubesFunctionLibrary::GenerateMesh(const TArray<FVector4>& Points, const FIntVector& Dimestions, float SurfaceLevel, TArray<FVector>& OutVertices, TArray<int32>& OutIndices, const FMeshGenerationParams& Params /*= FMeshGenerationParams::DefaultMeshGenerationParams*/)
-{
-	int CellsX = Dimestions.X - 1;
-	int CellsY = (CellsX > 0) ? Dimestions.Y - 1 : 0;
-	int CellsZ = (CellsY > 0) ? Dimestions.Z - 1 : 0;
-
-	if (CellsX == 0 || CellsY == 0 || CellsZ == 0 || Dimestions.X * Dimestions.Y * Dimestions.Z > Points.Num())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Dimension mismatch"));
-		return;
-	}
-
-
-	OutVertices.Reset(Params.EstimatedTriangleNum * 3);
-	OutIndices.Reset(Params.EstimatedTriangleNum * 3);
-
-	int SizeX = Dimestions.X;
-	int SizeXY = Dimestions.X * Dimestions.Y;
-	auto index = [SizeX, SizeXY](int x, int y, int z) { return x + y * SizeX + z * SizeXY; };
-
-	for (int X = 0; X < CellsX; X++)
-	{
-		for (int Y = 0; Y < CellsY; Y++)
-		{
-			for (int Z = 0; Z < CellsZ; Z++)
-			{
-				Poligonise(
-					{
-						Points[index(X,   Y,   Z)],
-						Points[index(X+1, Y,   Z)],
-						Points[index(X+1, Y+1, Z)],
-						Points[index(X,   Y+1, Z)],
-
-						Points[index(X,   Y,   Z + 1)],
-						Points[index(X+1, Y,   Z + 1)],
-						Points[index(X+1, Y+1, Z + 1)],
-						Points[index(X,   Y+1, Z + 1)]
-					},
-					SurfaceLevel, OutVertices, OutIndices
-				);
-			}
-		}
-	}
-}
-
-FIntVector UMarchingCubesFunctionLibrary::GetDimensions(const FPointsArray3D& Points)
-{
-	int x = Points.Points.Num();
-	int y = (x > 0) ? Points.Points[0].Num() : 0;
-	int z = (y > 0) ? Points.Points[0][0].Num() : 0;
-
-	return { x,y,z };
-}
-
-
-
-
-
-void UMarchingCubesFunctionLibrary::DrawPoints(const UObject* WorldContext, const FTransform& OriginTransform, const FPointsArray3D& PointsData, float MaxValue /*= 1*/)
-{
-	if (WorldContext == nullptr || WorldContext->GetWorld() == nullptr) return;
-	const UWorld* World = WorldContext->GetWorld();
-
-
-	FIntVector Size = GetDimensions(PointsData);
-	for (int X = 0; X < Size.X; X++)
-	{
-		for (int Y = 0; Y < Size.Y; Y++)
-		{
-			for (int Z = 0; Z < Size.Z; Z++)
-			{
-				float color = PointsData.Points[X][Y][Z].W / MaxValue * 255; 
-				DrawDebugPoint(World, OriginTransform.TransformPosition(PointsData.Points[X][Y][Z]), 5, FColor(color, color, color), false, 10);
-			}
-		}
-	}
-}
-
-
