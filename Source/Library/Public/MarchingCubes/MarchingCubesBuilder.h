@@ -8,6 +8,34 @@
 DECLARE_LOG_CATEGORY_EXTERN(MarchingCubesBuilder, Log, All);
 
 
+
+
+struct FIndexEdge
+{
+	int32 A;
+	int32 B;
+	FIndexEdge(int32 A, int32 B) : A(A), B(B) {}
+
+	bool operator== (const FIndexEdge& Other) const
+	{
+		return (A == Other.A && B == Other.B) || (B == Other.A && A == Other.B);
+	}
+};
+
+FORCEINLINE uint32 GetTypeHash(const FIndexEdge& Edge)
+{
+	//Commutative hash for numbers less than 2^32-1
+	const uint64 a = static_cast<uint64>(Edge.A);
+	const uint64 b = static_cast<uint64>(Edge.B);
+
+	const uint64 h0 = (b << 32) | a;
+	const uint64 h1 = (a << 32) | b;
+	const uint64 hash = (Edge.A < Edge.B) ? h0 : h1; // conditional move (CMOV) instruction
+	
+	return GetTypeHash(hash); //downgrade to uint32
+}
+
+
 class FMarchingCubesBuilder
 {
 public:
@@ -40,7 +68,11 @@ private:
 	TArray<FVector> Vertices;
 
 	TArray<int32> Indices;
+	
 
+	TSet<FIndexEdge> BoundaryEdges;
+
+	bool BoundaryEdgesCalculated = false;
 
 	bool InputIsValid = true;
 
@@ -50,6 +82,9 @@ public:
 
 	// Disabling this option will result in duplicate vertices on triangle connections
 	bool RemoveDuplicateVertices = true;
+
+	// Requires RemoveDuplicateVertices enabled
+	bool FindBoundaryEdges = false;
 
 
 public:
@@ -61,14 +96,6 @@ public:
 		ValidateInput();
 	}
 
-	bool IsValid() const { return InputIsValid; }
-
-	void GetData(TArray<FVector>& OutVertices, TArray<int32>& OutIndices) const
-	{
-		OutIndices = Indices;
-		OutVertices = Vertices;
-	}
-
 	void Build()
 	{
 		if (!IsValid()) return;
@@ -76,6 +103,7 @@ public:
 		GlobalIndexToVertice.Empty();
 		Vertices.Empty();
 		Indices.Empty();
+		BoundaryEdgesCalculated = false;
 
 		for (int X = 0; X < Dimensions.X - 1; X++)
 		{
@@ -95,6 +123,11 @@ public:
 			{
 				Indices[Index] = Index;
 			}
+		}
+
+		if (FindBoundaryEdges && RemoveDuplicateVertices)
+		{
+			CalcOuterEdges();
 		}
 
 		UE_LOG(MarchingCubesBuilder, Log, TEXT("Built mesh. Vertices: %d, Triangles: %d"), Vertices.Num(), Indices.Num() / 3);
@@ -131,6 +164,7 @@ protected:
 		/* Cube is entirely in/out of the surface */
 		if (EdgeTable[cubeindex] == 0) return;
 
+		
 		/* Create the triangle */
 		for (int i = 0; TriTable[cubeindex][i] != -1; i++)
 		{
@@ -194,38 +228,48 @@ protected:
 	}
 
 public:
-
+	/** Lerp between XYZ points using W component and SurfaceLevel */
 	static FORCEINLINE FVector VertexLerp(float SurfaceLevel, FVector4 P1, FVector4 P2)
 	{
 		float t = (SurfaceLevel - P1.W) / (P2.W - P1.W);
 		return FMath::Lerp(FVector(P1), FVector(P2), t);
 	}
-	/** Demonstration function. Does no reset output arrays. Does not check for duplicate vertices 
+
+
+	//////////////////////////////////////////////////////////////////////////
+	//	Utility
+	//	
+
+	/** Demonstration function. Does no reset output arrays. Does not check for duplicate vertices
 	 * @param	CubeVertices	8 vertices of cube. XYZ coordinates, W - surface value
 	 */
-	static void PoligonizeSingle(const FVector4 CubeVertices[8], float SurfaceLevel, TArray<FVector>& OutVertices, TArray<int32> OutIndices)
-	{
-		uint8 cubeindex = 0;
-		for (int Index = 0; Index < 8; Index++)
-		{
-			if (CubeVertices[Index].W > SurfaceLevel)
-			{
-				cubeindex |= 1 << Index;
-			}
-		}
-		/* Cube is entirely in/out of the surface */
-		if (EdgeTable[cubeindex] == 0) return;
+	static void PoligonizeSingle(const FVector4 CubeVertices[8], float SurfaceLevel, TArray<FVector>& OutVertices, TArray<int32> OutIndices);
 
-		/* Create the triangle */
-		for (int i = 0; TriTable[cubeindex][i] != -1; i++)
-		{
-			int LocalEdgeIndex = TriTable[cubeindex][i];
-			int a = Edges[LocalEdgeIndex][0];
-			int b = Edges[LocalEdgeIndex][1];		
-			int32 AddedAtIndex = OutVertices.Add(VertexLerp(SurfaceLevel, CubeVertices[a], CubeVertices[b]));
-			OutIndices.Add(AddedAtIndex);
-		}
+
+	bool IsValid() const { return InputIsValid; }
+
+	void GetData(TArray<FVector>& OutVertices, TArray<int32>& OutIndices) const
+	{
+		OutIndices = Indices;
+		OutVertices = Vertices;
 	}
+	
+	
+
+	/** @returns	true	if boundary edges were calculated. */
+	bool GetOuterVertices(TArray<int32>& OutIndices) const;
+
+	/** @returns	true	if boundary edges were calculated. */
+	bool GetBoundaryEdges(TArray<FIndexEdge>& OutEdges) const;
+
+	bool IsBoundaryCalculated() const { return BoundaryEdgesCalculated; }
+
+	/** Force recalculate boundary edges. 
+	 * By default called during mesh build.
+	 * Calling on mesh built with RemoveDuplicateVetrices set to false will result in wrong data
+	 */
+	void CalcOuterEdges();
+
 };
 
 

@@ -333,5 +333,90 @@ const FIntVector FMarchingCubesBuilder::EdgeToCubeOffset[12] =
 	FIntVector(1, 1, 0),
 	FIntVector(0, 1, 0)
 };
-
 #pragma endregion MarchingCubesData
+
+void FMarchingCubesBuilder::PoligonizeSingle(const FVector4 CubeVertices[8], float SurfaceLevel, TArray<FVector>& OutVertices, TArray<int32> OutIndices)
+{
+	uint8 cubeindex = 0;
+	for (int Index = 0; Index < 8; Index++)
+	{
+		if (CubeVertices[Index].W > SurfaceLevel)
+		{
+			cubeindex |= 1 << Index;
+		}
+	}
+	/* Cube is entirely in/out of the surface */
+	if (EdgeTable[cubeindex] == 0) return;
+
+	/* Create the triangle */
+	for (int i = 0; TriTable[cubeindex][i] != -1; i++)
+	{
+		int LocalEdgeIndex = TriTable[cubeindex][i];
+		int a = Edges[LocalEdgeIndex][0];
+		int b = Edges[LocalEdgeIndex][1];
+		int32 AddedAtIndex = OutVertices.Add(VertexLerp(SurfaceLevel, CubeVertices[a], CubeVertices[b]));
+		OutIndices.Add(AddedAtIndex);
+	}
+}
+
+bool FMarchingCubesBuilder::GetOuterVertices(TArray<int32>& OutIndices) const
+{	
+	if (!BoundaryEdgesCalculated) return false;
+
+	TSet<int32> UniqIndices;
+	for (const FIndexEdge& Edge : BoundaryEdges)
+	{
+		UniqIndices.Add(Edge.A);
+		UniqIndices.Add(Edge.B);
+	}
+	OutIndices.Reset(UniqIndices.Num());
+	OutIndices = UniqIndices.Array();
+
+	return true;
+}
+
+bool FMarchingCubesBuilder::GetBoundaryEdges(TArray<FIndexEdge>& OutEdges) const
+{
+	if (!BoundaryEdgesCalculated) return false;
+	OutEdges = BoundaryEdges.Array();
+	return true;
+}
+
+void FMarchingCubesBuilder::CalcOuterEdges()
+{
+	BoundaryEdges.Reset();
+
+	TSet<FIndexEdge> InnerEdges;
+
+	auto CheckEdge = [this, &InnerEdges](const FIndexEdge& Edge)
+	{
+		bool IsBoundary = BoundaryEdges.Contains(Edge);
+		bool IsInner = InnerEdges.Contains(Edge);
+
+		if (IsBoundary == false && IsInner == false) // this is unchecked edge
+		{
+			BoundaryEdges.Add(Edge);
+		}
+		else if (IsBoundary && IsInner == false) // edge is connected with another triangle
+		{
+			BoundaryEdges.Remove(Edge);
+			InnerEdges.Add(Edge);
+		}
+	};
+
+	for (int Index = 0; Index < Indices.Num(); Index += 3)
+	{
+		FIndexEdge Edge1(Indices[Index], Indices[Index + 1]);
+		FIndexEdge Edge2(Indices[Index + 1], Indices[Index + 2]);
+		FIndexEdge Edge3(Indices[Index + 2], Indices[Index]);
+
+		CheckEdge(Edge1);
+		CheckEdge(Edge2);
+		CheckEdge(Edge3);
+	}
+
+	BoundaryEdgesCalculated = true;
+}
+
+
+
