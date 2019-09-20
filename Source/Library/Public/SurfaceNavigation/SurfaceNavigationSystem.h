@@ -7,6 +7,7 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "SurfaceNavLocalData.h"
+#include "CelledSurfaceNavData.h"
 #include "SurfaceNavigationSystem.generated.h"
 
 class ASurfaceNavigationVolume;
@@ -76,6 +77,29 @@ struct FSurfaceNavigationBox
 };
 
 
+struct FVolumeUpdateRequest
+{
+	enum EType{ Add, Update, Remove };
+
+	EType Type;
+
+	uint32 BoxID;
+
+	FBox BoundingBox;
+
+	FVolumeUpdateRequest(EType Type, uint32 BoxID)
+		: Type(Type)
+		, BoxID(BoxID)
+	{}
+
+	FVolumeUpdateRequest(EType Type, uint32 BoxID, FBox BoundingBox)
+		: Type(Type)
+		, BoxID(BoxID)
+		, BoundingBox(BoundingBox)
+	{}
+};
+
+
 
 /**
  * 
@@ -105,6 +129,8 @@ class LIBRARY_API USurfaceNavigationSystem : public UObject
 	bool ShowGraph;
 
 
+	FCelledSurfaceNavData CelledData;
+
 public:
 	USurfaceNavigationSystem();
 
@@ -124,6 +150,7 @@ public:
 	
 	void RebuildGraph();
 
+	void ClearGraph();
 
 private:
 	typedef uint32 NavBoxID;
@@ -134,17 +161,16 @@ private:
 	void RemoveBoxByID(NavBoxID BoxID);
 
 
+	void VolumeUpdateRequest(FVolumeUpdateRequest Request);
 	void BoxChanged(NavBoxID BoxID);
 
-	DECLARE_DELEGATE_TwoParams(FSamplerFinished, FSamplerResult, NavBoxID);
-	void SamplerFinished(FSamplerResult Result, NavBoxID BoxID);
+	DECLARE_DELEGATE_TwoParams(FSamplerFinishedCell, FSamplerResult, FIntVector);
+	void SamplerFinished(FSamplerResult Result, FIntVector CellCoordinate);
 
 protected:
 	const FSurfaceNavigationBox* FindBox(const FVector& Location) const;
 
 	const FSurfaceNavigationBox* FindSharedBox(const FVector& Location1, const FVector& Location2) const;
-
-
 
 
 public:

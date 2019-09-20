@@ -50,6 +50,9 @@ public:
 	void ApplyContext(FDrawContext Context);
 
 
+	UFUNCTION(BlueprintCallable, Category = "Components|SimpleMeshDrawing")
+	void DrawImmediately(UMaterialInterface* DrawMaterial, const TArray<FVector>& MeshVertices, const TArray<int32>& MeshIndices, bool WorldSpace = false);
+
 
 	/** Draw mesh to context */
 	UFUNCTION(BlueprintCallable, Category = "Components|SimpleMeshDrawing")

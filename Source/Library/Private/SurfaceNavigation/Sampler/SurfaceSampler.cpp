@@ -19,7 +19,7 @@ void FSamplingTask::SampleData(FSamplerResult& OutResult)
 	const FVector CellSize = FVector(VoxelSize);
 	const FVector CellOffset = -BoxExtent + CellSize / 2;
 
-	FIntVector Dimensions = FIntVector(BoxExtent * 2 / CellSize);
+	FIntVector Dimensions = FIntVector(BoxExtent * 2 / CellSize + 1); //+1
 
 
 	const FCollisionShape TestBox = FCollisionShape::MakeBox(FVector(CellSize / 2));
@@ -49,7 +49,7 @@ void FSamplingTask::SampleData(FSamplerResult& OutResult)
 					DrawDebugPoint(World, WorldLocation, 5, FColor::White, false, 10);
 				}
 
-				OutResult.Points.Add(FVector4(TestLocation, WasOverlap ? 1 : 0));
+				OutResult.Points.Add(FVector4(Parameters.bSaveInWorldSpace ? WorldLocation : TestLocation, WasOverlap ? 1 : 0));
 			}
 		}
 	}

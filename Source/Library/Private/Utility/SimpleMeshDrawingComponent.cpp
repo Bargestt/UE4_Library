@@ -52,6 +52,28 @@ void USimpleMeshDrawingComponent::ApplyContext(FDrawContext Context)
 
 
 
+void USimpleMeshDrawingComponent::DrawImmediately(UMaterialInterface* DrawMaterial, const TArray<FVector>& MeshVertices, const TArray<int32>& MeshIndices, bool WorldSpace/* = false*/)
+{
+	FDrawContext Context;
+	if (WorldSpace)
+	{
+		TArray<FVector> LocalSpaceVertices(MeshIndices);
+
+		const FTransform& Tr = GetComponentTransform();		
+		for (int Index = 0; Index < LocalSpaceVertices.Num(); Index++)
+		{
+			LocalSpaceVertices[Index] = Tr.InverseTransformPosition(MeshVertices[Index]);
+		}		
+		Context.DrawMesh(LocalSpaceVertices, MeshIndices, DrawMaterial);
+	}
+	else
+	{
+		Context.DrawMesh(MeshVertices, MeshIndices, DrawMaterial);
+	}
+	
+	ApplyContext(Context);
+}
+
 void USimpleMeshDrawingComponent::DrawToContext(FDrawContext& Context, UMaterialInterface* DrawMaterial, const TArray<FVector>& MeshVertices, const TArray<int32>& MeshIndices)
 {
 	Context.DrawMesh(MeshVertices, MeshIndices, DrawMaterial);

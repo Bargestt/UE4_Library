@@ -14,13 +14,11 @@ class FSurfaceNavLocalData;
 
 namespace FSurfaceNavigation
 {
-	static const FVector InvalidLocation = FVector(FLT_MAX);
+	static const FVector InvalidLocation = FVector(MAX_FLT);
 
 	static bool IsValidLocation(const FVector& Location)
 	{
-		return  Location.X < InvalidLocation.X && Location.X > -InvalidLocation.X &&
-			Location.Y < InvalidLocation.Y && Location.Y > -InvalidLocation.Y &&
-			Location.Z < InvalidLocation.Z && Location.Z > -InvalidLocation.Z;
+		return  FMath::Abs(Location.X) < MAX_FLT && FMath::Abs(Location.Y) < MAX_FLT && FMath::Abs(Location.Z) < MAX_FLT;
 	}
 }
 

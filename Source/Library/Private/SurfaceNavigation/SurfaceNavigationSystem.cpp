@@ -9,6 +9,7 @@
 #include "SurfaceSampler.h"
 #include "SurfaceNavFunctionLibrary.h"
 #include "DrawDebugHelpers.h"
+#include "MarchingCubesBuilder.h"
 
 DEFINE_LOG_CATEGORY(SurfaceNavigation);
 
@@ -42,6 +43,11 @@ void ASurfaceNavigationActor::RebuildGraph()
 {
 	SurfaceNavigationSystem->RebuildGraph();
 }
+
+void ASurfaceNavigationActor::ClearGraph()
+{
+	SurfaceNavigationSystem->ClearGraph();
+}
 //////////////////////////////////////////////////////////////////////////
 
 
@@ -60,6 +66,9 @@ USurfaceNavigationSystem::USurfaceNavigationSystem()
 	ShowGraph = true;
 	
 	VolumesNum = 0;
+
+	
+	CelledData.CellSize = 300;
 }
 
 void USurfaceNavigationSystem::PostInitProperties()
@@ -73,6 +82,7 @@ void USurfaceNavigationSystem::PostInitProperties()
 	{
 		VolumeAdded(Cast<ASurfaceNavigationVolume>(v));
 	}
+	
 }
 DECLARE_CYCLE_STAT(TEXT("SurfaceNavigation ~ FindPath"), STAT_FindPath, STATGROUP_SurfaceNavigation);
 DECLARE_DWORD_COUNTER_STAT(TEXT("SurfaceNavigation ~ PathLength"), STAT_PathLength, STATGROUP_SurfaceNavigation);
@@ -126,24 +136,15 @@ bool USurfaceNavigationSystem::GetClosestNodeLocation(const FVector& WorldLocati
 	return false;
 }
 
+
+
 void USurfaceNavigationSystem::VolumeAdded(ASurfaceNavigationVolume* Volume)
 {
 	if (Volume == nullptr) return;
 
 	uint32 Id = Volume->GetUniqueID();	
 	FBox Bounds = Volume->GetComponentsBoundingBox(true);
-	if (FSurfaceNavigationBox* Box = FindBoxByID(Id))
-	{
-		Box->BoundingBox = Bounds;
-	}
-	else
-	{
-		FSurfaceNavigationBox NewBox;
-		NewBox.BoundingBox = Bounds;
-		Volumes.Add(Id, NewBox);		
-	}
-	VolumesNum = Volumes.Num();
-	BoxChanged(Id);
+	VolumeUpdateRequest(FVolumeUpdateRequest(FVolumeUpdateRequest::Add, Id, Bounds));
 }
 
 void USurfaceNavigationSystem::VolumeUpdated(ASurfaceNavigationVolume* Volume)
@@ -152,35 +153,29 @@ void USurfaceNavigationSystem::VolumeUpdated(ASurfaceNavigationVolume* Volume)
 
 	uint32 Id = Volume->GetUniqueID();
 	FBox Bounds = Volume->GetComponentsBoundingBox(true);
-	if (FSurfaceNavigationBox* Box = FindBoxByID(Id))
-	{
-		Box->BoundingBox = Bounds;
-	}
-	else
-	{
-		FSurfaceNavigationBox NewBox;
-		NewBox.BoundingBox = Bounds;
-		Volumes.Add(Id, NewBox);
-	}
-	VolumesNum = Volumes.Num();
-	BoxChanged(Id);
+	VolumeUpdateRequest(FVolumeUpdateRequest(FVolumeUpdateRequest::Update, Id, Bounds));
 }
 
 void USurfaceNavigationSystem::VolumeRemoved(ASurfaceNavigationVolume* Volume)
 {
 	if (Volume == nullptr) return;
 
-	RemoveBoxByID(Volume->GetUniqueID());
-	VolumesNum = Volumes.Num();
+	VolumeUpdateRequest(FVolumeUpdateRequest(FVolumeUpdateRequest::Remove, Volume->GetUniqueID()));	
 }
+
+
+
 
 void USurfaceNavigationSystem::DrawGraph() const
 {	
+	//FlushPersistentDebugLines(GetWorld());
 	for (const TPair<NavBoxID, FSurfaceNavigationBox>& VolumePair : Volumes)
 	{
 		const FSurfaceNavigationBox& Box = VolumePair.Value;
 		USurfaceNavFunctionLibrary::DrawSurfaceGraph(this, FTransform(FRotator::ZeroRotator, Box.BoundingBox.GetCenter()), Box.NavData);
 	}
+
+	CelledData.DrawGraph();
 }
 
 
@@ -192,6 +187,11 @@ void USurfaceNavigationSystem::RebuildGraph()
 	}
 }
 
+void USurfaceNavigationSystem::ClearGraph()
+{
+	CelledData.ClearAllCells();
+}
+
 FSurfaceNavigationBox* USurfaceNavigationSystem::FindBoxByID(NavBoxID BoxID)
 {
 	return Volumes.Find(BoxID);
@@ -200,6 +200,42 @@ FSurfaceNavigationBox* USurfaceNavigationSystem::FindBoxByID(NavBoxID BoxID)
 void USurfaceNavigationSystem::RemoveBoxByID(NavBoxID BoxID)
 {
 	Volumes.Remove(BoxID);
+}
+
+void USurfaceNavigationSystem::VolumeUpdateRequest(FVolumeUpdateRequest Request)
+{
+	if (Request.Type == FVolumeUpdateRequest::Remove)
+	{
+		RemoveBoxByID(Request.BoxID);		
+	}
+	else
+	{
+		if (FSurfaceNavigationBox* Box = FindBoxByID(Request.BoxID))
+		{
+			if (Request.Type == FVolumeUpdateRequest::Update)
+			{
+				//Clear old position cells
+				TArray<FIntVector> cellsContainingBox = CelledData.GetCellsContainingBox(Box->BoundingBox);
+				for (const FIntVector& Coord : cellsContainingBox)
+				{
+					CelledData.DrawCellBounds(Coord, FColor::Red, 15, 2);
+					CelledData.ClearCell(Coord);
+				}
+			}
+
+			Box->BoundingBox = Request.BoundingBox;
+		}
+		else
+		{
+			FSurfaceNavigationBox NewBox;
+			NewBox.BoundingBox = Request.BoundingBox;
+			Volumes.Add(Request.BoxID, NewBox);
+		}
+
+		BoxChanged(Request.BoxID);
+	}
+
+	VolumesNum = Volumes.Num();
 }
 
 void USurfaceNavigationSystem::BoxChanged(uint32 BoxID)
@@ -216,26 +252,33 @@ void USurfaceNavigationSystem::BoxChanged(uint32 BoxID)
 		UE_LOG(SurfaceNavigation, Error, TEXT("Box update failed. No sampler"));
 		return;
 	}
-	Sampler->ScheduleSampleTask<FSamplerFinished>(Box->BoundingBox, this, &USurfaceNavigationSystem::SamplerFinished, BoxID);
+
+	// DEBUG //////////////////////////////////////////////////////////////////////////
+	CelledData.SetWorld(GetWorld());
+	//////////////////////////////////////////////////////////////////////////
+
+	TArray<FIntVector> cellsContainingBox = CelledData.GetCellsContainingBox(Box->BoundingBox);
+	for (const FIntVector& Coord : cellsContainingBox)
+	{		
+		Sampler->ScheduleSampleTask<FSamplerFinishedCell>(CelledData.GetCellBox(Coord), this, &USurfaceNavigationSystem::SamplerFinished, Coord);
+
+		CelledData.DrawCellBounds(Coord, FColor::White, 15, 1);
+	}	
 }
 
-void USurfaceNavigationSystem::SamplerFinished(FSamplerResult Result, NavBoxID BoxID)
+void USurfaceNavigationSystem::SamplerFinished(FSamplerResult Result, FIntVector CellCoordinate)
 {
-	if (FSurfaceNavigationBox* Box = FindBoxByID(BoxID))
-	{
-		FSurfaceNavBuilder Builder;
-		Builder.SurfaceValue = SurfaceValue;
-		Builder.BuildGraph(Result.Points, Result.Dimensions, Box->NavData);		
-		UE_LOG(SurfaceNavigation, Log, TEXT("Updated {box:%d} successfully. %d Nodes from %d points"), BoxID, Box->NavData.GetGraph().Num(), Result.Points.Num());
-	}
+	FMarchingCubesBuilder Builder(Result.Points, Result.Dimensions);
+	Builder.FindBoundaryEdges = true;
+	Builder.Build();
+	
+	FCellCreationData Data;
+	Builder.GetData(Data.CellVertices, Data.CellTriangles);
+	Builder.GetOuterVertices(Data.OuterVertices);
 
-	if (ShowGraph)
-	{
-		DrawGraph();
-	}
-}
-
-
+	CelledData.UpdateCell(CellCoordinate, Data);
+	CelledData.DrawCellGraph(CellCoordinate, 5);
+} 
 
 const FSurfaceNavigationBox* USurfaceNavigationSystem::FindBox(const FVector& Location) const
 {

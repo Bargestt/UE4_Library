@@ -378,7 +378,14 @@ bool FMarchingCubesBuilder::GetOuterVertices(TArray<int32>& OutIndices) const
 bool FMarchingCubesBuilder::GetBoundaryEdges(TArray<FIndexEdge>& OutEdges) const
 {
 	if (!BoundaryEdgesCalculated) return false;
-	OutEdges = BoundaryEdges.Array();
+	OutEdges = BoundaryEdges;
+	return true;
+}
+
+bool FMarchingCubesBuilder::GetInnerEdges(TArray<FIndexEdge>& OutEdges) const
+{
+	if (!BoundaryEdgesCalculated) return false;
+	OutEdges = InnerEdges;
 	return true;
 }
 
@@ -387,8 +394,9 @@ void FMarchingCubesBuilder::CalcOuterEdges()
 	BoundaryEdges.Reset();
 
 	TSet<FIndexEdge> InnerEdges;
+	TSet<FIndexEdge> BoundaryEdges;
 
-	auto CheckEdge = [this, &InnerEdges](const FIndexEdge& Edge)
+	auto CheckEdge = [&BoundaryEdges, &InnerEdges](const FIndexEdge& Edge)
 	{
 		bool IsBoundary = BoundaryEdges.Contains(Edge);
 		bool IsInner = InnerEdges.Contains(Edge);
@@ -415,7 +423,100 @@ void FMarchingCubesBuilder::CalcOuterEdges()
 		CheckEdge(Edge3);
 	}
 
+	this->InnerEdges = InnerEdges.Array();
+	this->BoundaryEdges = BoundaryEdges.Array();
+
 	BoundaryEdgesCalculated = true;
+}
+
+void FMarchingCubesBuilder::CollapseCoplanarTriangles()
+{	
+	if (!BoundaryEdgesCalculated)
+	{
+		CalcOuterEdges();
+	}
+
+	struct FTriangle
+	{
+		int32 Vertices[3];
+		FTriangle(int32 A, int32 B, int32 C) 
+		{ 
+			Vertices[0] = A; 
+			Vertices[1] = B;
+			Vertices[2] = C;
+		}
+
+		int32 GetOppositeVertice(const FIndexEdge& Edge) const
+		{
+			if (Vertices[0] != Edge.A && Vertices[0] != Edge.B) return Vertices[0];
+			else if (Vertices[1] != Edge.A && Vertices[1] != Edge.B) return Vertices[1];
+			else  return Vertices[2]; 
+			//(Vertices[2] != Edge.A && Vertices[2] != Edge.B)
+		}
+	};
+
+	TArray<int32> OuterVertsArr;
+	GetOuterVertices(OuterVertsArr);
+	TSet<int32> OuterVertices(OuterVertsArr);
+
+	TMap<FIndexEdge, TArray<int32>> EdgeToTriangleMap;
+	TArray<FTriangle> Triangles;
+	for (int Index = 0; Index < Indices.Num() ; Index+=3)
+	{
+		int32 A = Indices[Index];
+		int32 B = Indices[Index + 1];
+		int32 C = Indices[Index + 2];
+		int32 TriangleIndex = Triangles.Add(FTriangle(A, B, C));
+
+		EdgeToTriangleMap.FindOrAdd(FIndexEdge(A, B)).Add(TriangleIndex);
+		EdgeToTriangleMap.FindOrAdd(FIndexEdge(B, C)).Add(TriangleIndex);
+		EdgeToTriangleMap.FindOrAdd(FIndexEdge(C, A)).Add(TriangleIndex);
+	}
+
+	TMap<int32, int32> IndexRemap;
+	for (const FIndexEdge& Edge : InnerEdges)
+	{
+		if(OuterVertices.Contains(Edge.A) || OuterVertices.Contains(Edge.B)) continue;
+
+		TArray<int32> TriangleIndices = EdgeToTriangleMap[Edge];
+		if (TriangleIndices.Num() == 2)
+		{
+			FTriangle Triangle1 = Triangles[TriangleIndices[0]];
+			FTriangle Triangle2 = Triangles[TriangleIndices[1]];
+
+			FVector EdgeVertex1 = Vertices[Edge.A];
+			FVector EdgeVertex2 = Vertices[Edge.B];
+
+			FVector Triangle1Vertex = Vertices[Triangle1.GetOppositeVertice(Edge)];
+			FVector Triangle2Vertex = Vertices[Triangle2.GetOppositeVertice(Edge)];
+
+			FVector Triangle1_Normal = FVector::CrossProduct(EdgeVertex2 - EdgeVertex1, Triangle1Vertex - EdgeVertex1).GetSafeNormal();
+			FVector Triangle2_Normal = FVector::CrossProduct(EdgeVertex2 - EdgeVertex1, Triangle2Vertex - EdgeVertex1).GetSafeNormal();
+
+			if(Triangle1_Normal.IsNearlyZero() || Triangle2_Normal.IsNearlyZero()) continue;
+
+			float Dot = FVector::DotProduct(Triangle2_Normal, Triangle1_Normal);
+			
+			if (FMath::Abs(Dot) > 0.9f)
+			{
+				FVector Midpoint = EdgeVertex1 + (EdgeVertex2 - EdgeVertex1) / 2;				
+
+				Vertices[Edge.A] = Midpoint;
+
+				IndexRemap.Add(Edge.B, Edge.A);
+			}
+		}
+	}
+
+	for (int Index = 0; Index < Indices.Num() ; Index++)
+	{
+		const int32* find = IndexRemap.Find(Indices[Index]);
+		if (find)
+		{
+			Indices[Index] = *find;
+		}
+	}
+
 }
 
 

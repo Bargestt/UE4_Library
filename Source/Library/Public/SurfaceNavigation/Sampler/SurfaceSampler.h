@@ -35,8 +35,14 @@ struct SamplingTaskParameters
 	float VoxelSize;
 
 	bool bDrawDebug;
+
+	bool bSaveInWorldSpace;
 	
-	SamplingTaskParameters() : VoxelSize(25), bDrawDebug(false) {}	
+	SamplingTaskParameters() 
+		: VoxelSize(25)
+		, bDrawDebug(false)
+		, bSaveInWorldSpace(true)
+	{}	
 };
 
 

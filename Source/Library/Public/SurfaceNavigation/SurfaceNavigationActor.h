@@ -40,6 +40,8 @@ public:
 	UFUNCTION(CallInEditor)
 	void RebuildGraph();
 
+	UFUNCTION(CallInEditor)
+	void ClearGraph();
 
 	FORCEINLINE USurfaceNavigationSystem* GetNavigationSystem() const { return SurfaceNavigationSystem; }
 };

@@ -69,8 +69,9 @@ private:
 
 	TArray<int32> Indices;
 	
-
-	TSet<FIndexEdge> BoundaryEdges;
+	TArray<FIndexEdge> BoundaryEdges;
+	TArray<FIndexEdge> InnerEdges;
+	
 
 	bool BoundaryEdgesCalculated = false;
 
@@ -252,8 +253,7 @@ public:
 	{
 		OutIndices = Indices;
 		OutVertices = Vertices;
-	}
-	
+	}	
 	
 
 	/** @returns	true	if boundary edges were calculated. */
@@ -262,14 +262,22 @@ public:
 	/** @returns	true	if boundary edges were calculated. */
 	bool GetBoundaryEdges(TArray<FIndexEdge>& OutEdges) const;
 
+	/** @returns	true	if inner edges were calculated. */
+	bool GetInnerEdges(TArray<FIndexEdge>& OutEdges) const;
+
 	bool IsBoundaryCalculated() const { return BoundaryEdgesCalculated; }
 
-	/** Force recalculate boundary edges. 
+	/** Force recalculate boundary and inner edges. 
 	 * By default called during mesh build.
 	 * Calling on mesh built with RemoveDuplicateVetrices set to false will result in wrong data
 	 */
 	void CalcOuterEdges();
 
+
+
+	void CollapseCoplanarTriangles();
+
+	
 };
 
 
