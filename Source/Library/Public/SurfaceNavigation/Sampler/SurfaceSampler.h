@@ -61,9 +61,10 @@ protected:
 public:
 	FSamplingTask(const UWorld* World, const FBox& SampleBox, const SamplingTaskParameters Params = SamplingTaskParameters())
 		: World(World)
+		, Parameters(Params)
 		, SampleBox(SampleBox)
 		, State(TaskState::Waiting)
-		, Parameters(Params)
+		
 	{ }
 	virtual ~FSamplingTask() {
 		OnFinish.Unbind();

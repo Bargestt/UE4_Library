@@ -351,17 +351,17 @@ void FCelledSurfaceNavData::DrawCellGraph(const FIntVector& CellCoords, float Li
 	{
 		const FGraphNode& Node = Nodes[NodeRef];
 
-		FVector Center = GetNodeCenter(NodeRef);
+		FVector NodeCenter = GetNodeCenter(NodeRef);
 
-		DrawDebugPoint(World, Center, LinkSize, LinkColor, false, Lifetime);
+		DrawDebugPoint(World, NodeCenter, LinkSize, LinkColor, false, Lifetime);
 		DrawDebugLine(World, Vertices[Node.Triangle[1]], Vertices[Node.Triangle[0]], EdgeColor, false, Lifetime, 0, EdgeSize);
 		DrawDebugLine(World, Vertices[Node.Triangle[2]], Vertices[Node.Triangle[1]], EdgeColor, false, Lifetime, 0, EdgeSize);
 		DrawDebugLine(World, Vertices[Node.Triangle[0]], Vertices[Node.Triangle[2]], EdgeColor, false, Lifetime, 0, EdgeSize);
 
 		for (GraphNodeRef ConnectedNodeRef : Node.Neighbours)
 		{			
-			FVector Center2 = GetNodeCenter(ConnectedNodeRef);
-			DrawDebugLine(World, Center, Center2, LinkColor, false, Lifetime, 0, LinkSize);
+			FVector NodeCenter2 = GetNodeCenter(ConnectedNodeRef);
+			DrawDebugLine(World, NodeCenter, NodeCenter2, LinkColor, false, Lifetime, 0, LinkSize);
 		}
 	}
 }

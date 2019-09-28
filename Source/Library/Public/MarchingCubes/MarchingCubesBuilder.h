@@ -90,9 +90,9 @@ public:
 
 public:
 	FMarchingCubesBuilder(const TArray<FVector4>& Points, const FIntVector Dimensions)
-		: Points(Points)
+		: StorageOffset(Dimensions.X*Dimensions.Y*Dimensions.Z)
+		, Points(Points)
 		, Dimensions(Dimensions)
-		, StorageOffset(Dimensions.X*Dimensions.Y*Dimensions.Z)
 	{
 		ValidateInput();
 	}

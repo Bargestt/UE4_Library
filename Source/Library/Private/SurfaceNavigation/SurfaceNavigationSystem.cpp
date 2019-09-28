@@ -75,10 +75,10 @@ void USurfaceNavigationSystem::PostInitProperties()
 {
 	Super::PostInitProperties();
 
-	TArray<AActor*> Volumes;
-	UGameplayStatics::GetAllActorsOfClass(this, ASurfaceNavigationVolume::StaticClass(), Volumes);
+	TArray<AActor*> FoundVolumes;
+	UGameplayStatics::GetAllActorsOfClass(this, ASurfaceNavigationVolume::StaticClass(), FoundVolumes);
 
-	for (AActor* v : Volumes)
+	for (AActor* v : FoundVolumes)
 	{
 		VolumeAdded(Cast<ASurfaceNavigationVolume>(v));
 	}

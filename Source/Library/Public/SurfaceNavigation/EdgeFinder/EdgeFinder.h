@@ -36,10 +36,10 @@ public:
 
 	FTransform Transform;
 #endif // !UE_BUILD_SHIPPING
-	void SetDebugInfo(UWorld* World, FTransform Tr) 
+	void SetDebugInfo(UWorld* NewWorld, FTransform Tr) 
 	{ 
 #if !UE_BUILD_SHIPPING
-		this->World = World, Transform = Tr; 
+		this->World = NewWorld, Transform = Tr;
 #endif // !UE_BUILD_SHIPPING
 	}
 

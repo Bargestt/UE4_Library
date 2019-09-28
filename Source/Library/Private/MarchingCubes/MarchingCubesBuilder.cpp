@@ -393,22 +393,22 @@ void FMarchingCubesBuilder::CalcOuterEdges()
 {
 	BoundaryEdges.Reset();
 
-	TSet<FIndexEdge> InnerEdges;
-	TSet<FIndexEdge> BoundaryEdges;
+	TSet<FIndexEdge> InnerEdgesSet;
+	TSet<FIndexEdge> BoundaryEdgesSet;
 
-	auto CheckEdge = [&BoundaryEdges, &InnerEdges](const FIndexEdge& Edge)
+	auto CheckEdge = [&BoundaryEdgesSet, &InnerEdgesSet](const FIndexEdge& Edge)
 	{
-		bool IsBoundary = BoundaryEdges.Contains(Edge);
-		bool IsInner = InnerEdges.Contains(Edge);
+		bool IsBoundary = BoundaryEdgesSet.Contains(Edge);
+		bool IsInner = InnerEdgesSet.Contains(Edge);
 
 		if (IsBoundary == false && IsInner == false) // this is unchecked edge
 		{
-			BoundaryEdges.Add(Edge);
+			BoundaryEdgesSet.Add(Edge);
 		}
 		else if (IsBoundary && IsInner == false) // edge is connected with another triangle
 		{
-			BoundaryEdges.Remove(Edge);
-			InnerEdges.Add(Edge);
+			BoundaryEdgesSet.Remove(Edge);
+			InnerEdgesSet.Add(Edge);
 		}
 	};
 
@@ -423,8 +423,8 @@ void FMarchingCubesBuilder::CalcOuterEdges()
 		CheckEdge(Edge3);
 	}
 
-	this->InnerEdges = InnerEdges.Array();
-	this->BoundaryEdges = BoundaryEdges.Array();
+	this->InnerEdges = InnerEdgesSet.Array();
+	this->BoundaryEdges = BoundaryEdgesSet.Array();
 
 	BoundaryEdgesCalculated = true;
 }

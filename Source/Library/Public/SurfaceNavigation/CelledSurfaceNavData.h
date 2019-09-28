@@ -216,7 +216,7 @@ public:
 protected:
 	const UWorld* World;
 public:
-	void SetWorld(const UWorld* World) { this->World = World; }
+	void SetWorld(const UWorld* NewWorld) { World = NewWorld; }
 	void DrawCellBounds(const FIntVector& CellCoords, FColor CellColor, float Lifetime = 1, float Thickness = 0) const;
 	void DrawCellGraph(const FIntVector& CellCoords, float Lifetime = 1) const;
 	
